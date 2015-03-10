@@ -69,12 +69,12 @@
         if (this._items.length)
         {
             this._items[0]++;
+            propjet.invalidate(this._items);
         }
         else
         {
             this._items.push(1);
         }
-        propjet.invalidate(this._items);
     }
 }
 

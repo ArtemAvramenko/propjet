@@ -1,0 +1,7 @@
+bin
+obj
+packages
+TypeScripts/*.js
+TypeScripts/*.js.map
+*.suo
+*.csproj.user
