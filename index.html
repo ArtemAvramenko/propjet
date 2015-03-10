@@ -1,0 +1,36 @@
+﻿<!DOCTYPE html>
+<html lang="en" ng-app="DemoApp">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta charset="utf-8" />
+    <title>propjet.js demo</title>
+    <link rel="stylesheet" href="demo.css" type="text/css" />
+    <script src="Scripts/underscore.js"></script>
+    <script src="Scripts/angular.js"></script>
+    <script src="TypeScripts/propjet.js"></script>
+    <script src="TypeScripts/demo.js"></script>
+</head>
+<body ng-controller="DemoController as c">
+    <form>
+        <input type="text" ng-model="c.firstName">
+        <input type="text" ng-model="c.lastName">
+        <button ng-click="c.resetName()">Reset</button>
+        <button ng-click="c.inc()">Inc</button>
+    </form>
+    <div>
+        {{c.fullName}}
+    </div>
+    <div>
+        {{c.fullNameCaps}}
+    </div>
+    <div>
+        {{c.allNames}}
+    </div>
+    <div>
+        {{c.nowText}}
+    </div>
+    <div>
+        {{c.allItems}}
+    </div>
+</body>
+</html>

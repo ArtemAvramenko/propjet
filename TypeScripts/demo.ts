@@ -1,0 +1,81 @@
+﻿class DemoController
+{
+    constructor()
+    {
+        propjet(this);
+        this.resetName();
+    }
+
+    private _items = propjet<number[]>().
+        default(() => []).
+        with(value => value || []).
+        declare();
+
+    allItems = propjet<string>().
+        require(() => this._items).
+        get(items => items.join(', ')).
+        declare();
+
+    now = propjet<Date>().
+        require(
+        (oldDate: Date) =>
+        {
+            var date = new Date();
+            date.setSeconds(0, 0);
+            return oldDate && oldDate.getTime() == date.getTime() ? oldDate : date;
+        }).
+        get(date => date).
+        declare();
+
+    nowText = propjet<string>().
+        require(() => this.now).
+        get(date => date.getHours() + ':' + date.getMinutes()).
+        declare();
+
+    firstName = propjet<string>().
+        default(() => '').
+        with(value => value.substring(0, 1).toUpperCase() + value.substring(1).toLowerCase()).
+        declare();
+
+    lastName = propjet<string>().
+        default(() => '').
+        with(value => value.substring(0, 1).toUpperCase() + value.substring(1).toLowerCase()).
+        declare();
+
+    fullName = propjet<string>().
+        require(() => this.firstName,() => this.lastName).
+        get((firstName, lastName) => firstName + ' ' + lastName).
+        declare();
+
+    fullNameCaps = propjet<string>().
+        require(() => this.fullName).
+        get(fullName => fullName.toUpperCase()).
+        declare();
+
+    allNames = propjet<string>().
+        require(() => this.firstName,() => this.lastName,() => this.fullName,() => this.fullNameCaps).
+        get((...names: string[]) => names.join(', ')).
+        declare();
+
+    resetName()
+    {
+        this.firstName = 'john';
+        this.lastName = 'doe';
+        this._items = null;
+    }
+
+    inc()
+    {
+        if (this._items.length)
+        {
+            this._items[0]++;
+        }
+        else
+        {
+            this._items.push(1);
+        }
+        propjet.invalidate(this._items);
+    }
+}
+
+angular.module('DemoApp', []).controller('DemoController', DemoController);
