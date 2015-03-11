@@ -28,13 +28,23 @@
     }
 }
 
-propjet = <any>(<T>(object?: Object) =>
+propjet = <any>(<T>(object?: Object, propertyName?: string) =>
 {
-    if (object != null)
+    if (object && !propertyName)
     {
-        for (var name in object)
+        for (propertyName in object)
         {
-            checkProperty(name);
+            var descriptor = Object.getOwnPropertyDescriptor(object, propertyName);
+            if (descriptor != null && descriptor.get != null)
+            {
+                continue;
+            }
+            data = object[propertyName];
+            if (data != null && data.__dep__unready__)
+            {
+                delete data.__dep__unready__;
+                createProperty(propertyName, data);
+            }
         }
         return;
     }
@@ -70,25 +80,19 @@ propjet = <any>(<T>(object?: Object) =>
     };
     builder.declare = () =>
     {
-        return <any>data;
+        if (propertyName)
+        {
+            createProperty(propertyName, data);
+        }
+        else
+        {
+            return <any>data;
+        }
     };
     return builder;
 
-    function checkProperty(propertyName: string)
+    function createProperty(propertyName: string, data: Propjet.IPropData<any>)
     {
-        var descriptor = Object.getOwnPropertyDescriptor(object, propertyName);
-        if (descriptor != null && descriptor.get != null)
-        {
-            return;
-        }
-        var value = object[propertyName];
-        var data = <Propjet.IPropData<any>>value;
-        if (data == null || !data.__dep__unready__)
-        {
-            return;
-        }
-        delete data.__dep__unready__;
-
         Object.defineProperty(object, propertyName, {
             configurable: true,
             enumerable: true,

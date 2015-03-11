@@ -3,6 +3,7 @@
     export interface IPropjet
     {
         <T>(): Propjet.IRequireDefaultGetOperator<T>;
+        <T>(object: Object, propertyName: string): Propjet.IRequireDefaultGetOperator<T>;
         <TObject>(object: TObject): void;
         invalidate<T>(value: T): void;
     }
