@@ -3,10 +3,10 @@ JavaScript/TypeScript library for reactive properties declaration.
 
 Code licensed under [MIT License](LICENSE).
 
-#Installing via [NuGet](https://www.nuget.org/packages/propjet.js/)
-```
-$ Install-Package propjet.js
-```
+#Installing
+Via [NuGet](https://www.nuget.org/packages/propjet.js/): `$ Install-Package propjet.js`
+
+Manually: copy files from [Dist](Dist)
 
 #Example
 ```C++
