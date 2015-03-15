@@ -1,4 +1,4 @@
-﻿class DemoController
+class DemoController
 {
     constructor()
     {
