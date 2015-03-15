@@ -13,7 +13,7 @@
 
     allItems = propjet<string>().
         require(() => this._items).
-        get(items => items.join(', ')).
+        get(items => items.join(", ")).
         declare();
 
     now = propjet<Date>().
@@ -22,29 +22,29 @@
         {
             var date = new Date();
             date.setSeconds(0, 0);
-            return oldDate && oldDate.getTime() == date.getTime() ? oldDate : date;
+            return oldDate && oldDate.getTime() === date.getTime() ? oldDate : date;
         }).
         get(date => date).
         declare();
 
     nowText = propjet<string>().
         require(() => this.now).
-        get(date => date.getHours() + ':' + date.getMinutes()).
+        get(date => date.getHours() + ":" + date.getMinutes()).
         declare();
 
     firstName = propjet<string>().
-        default(() => '').
+        default(() => "").
         with(value => value.substring(0, 1).toUpperCase() + value.substring(1).toLowerCase()).
         declare();
 
     lastName = propjet<string>().
-        default(() => '').
+        default(() => "").
         with(value => value.substring(0, 1).toUpperCase() + value.substring(1).toLowerCase()).
         declare();
 
     fullName = propjet<string>().
         require(() => this.firstName,() => this.lastName).
-        get((firstName, lastName) => firstName + ' ' + lastName).
+        get((firstName, lastName) => firstName + " " + lastName).
         declare();
 
     fullNameCaps = propjet<string>().
@@ -54,13 +54,13 @@
 
     allNames = propjet<string>().
         require(() => this.firstName,() => this.lastName,() => this.fullName,() => this.fullNameCaps).
-        get((...names: string[]) => names.join(', ')).
+        get((...names: string[]) => names.join(", ")).
         declare();
 
     resetName()
     {
-        this.firstName = 'john';
-        this.lastName = 'doe';
+        this.firstName = "john";
+        this.lastName = "doe";
         this._items = null;
     }
 
@@ -78,4 +78,4 @@
     }
 }
 
-angular.module('DemoApp', []).controller('DemoController', DemoController);
+angular.module("DemoApp", []).controller("DemoController", DemoController);

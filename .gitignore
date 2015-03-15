@@ -1,7 +1,9 @@
 bin
 obj
 packages
-TypeScripts/*.js
-TypeScripts/*.js.map
+/*.js
+/*.js.map
+Src/*.js
+Src/*.js.map
 *.suo
 *.csproj.user
