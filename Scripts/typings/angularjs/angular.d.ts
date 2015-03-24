@@ -6,13 +6,15 @@
 
 /// <reference path="../jquery/jquery.d.ts" />
 
-declare var angular: ng.IAngularStatic;
+declare var angular: angular.IAngularStatic;
 
 // Support for painless dependency injection
 interface Function {
     $inject?: string[];
 }
 
+// Collapse angular into ng
+import ng = angular;
 // Support AMD require
 declare module 'angular' {
     export = angular;
@@ -21,7 +23,7 @@ declare module 'angular' {
 ///////////////////////////////////////////////////////////////////////////////
 // ng module (angular.js)
 ///////////////////////////////////////////////////////////////////////////////
-declare module ng {
+declare module angular {
 
     // not directly implemented, but ensures that constructed class implements $get
     interface IServiceProviderClass {
@@ -584,13 +586,13 @@ declare module ng {
     }
 
     interface IScope extends IRootScopeService { }
-	
+
     /**
      * $scope for ngRepeat directive.
      * see https://docs.angularjs.org/api/ng/directive/ngRepeat
      */
     interface IRepeatScope extends IScope {
-	
+
         /**
          * iterator offset of the repeated element (0..length-1).
          */
@@ -620,7 +622,7 @@ declare module ng {
          * true if the iterator position $index is odd (otherwise false).
          */
         $odd: boolean;
-	
+
 	}
 
     interface IAngularEvent {
@@ -889,6 +891,7 @@ declare module ng {
         // implementation tests it as boolean, which makes more sense
         // since this is a toggler
         html5Mode(active: boolean): ILocationProvider;
+        html5Mode(mode: { enabled?: boolean; requireBase?: boolean; rewriteLinks?: boolean; }): ILocationProvider;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1151,6 +1154,15 @@ declare module ng {
          * @param config Optional configuration object
          */
         put<T>(url: string, data: any, config?: IRequestShortcutConfig): IHttpPromise<T>;
+
+        /**
+         * Shortcut method to perform PATCH request.
+         *
+         * @param url Relative or absolute URL specifying the destination of the request
+         * @param data Request content
+         * @param config Optional configuration object
+         */
+        patch<T>(url: string, data: any, config?: IRequestShortcutConfig): IHttpPromise<T>;
 
         /**
          * Runtime equivalent of the $httpProvider.defaults property. Allows configuration of default headers, withCredentials as well as request and response transformations.

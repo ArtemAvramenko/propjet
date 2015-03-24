@@ -1,6 +1,6 @@
 declare module Propjet
 {
-    export const enum Stage { getting = 1, setting = 2 }
+    export const enum Stage { Getting = 1, Setting = 2 }
 
     export interface IAllOperators<T>
         extends IRequireOperator<T>, IDefaultOperator<T>, IGetOperator<T>, IDeclareOperator<T>, ISetOperator<T>, IWithOperator<T>
@@ -38,28 +38,28 @@ declare module Propjet
     {
         var data: Propjet.IPropData<T>;
 
+        // Create properties for all IPropData fields in object
         if (object && !propertyName)
         {
-            for (propertyName in object)
+            // Enumerate all own fields skipping properties
+            for (propertyName in Object.getOwnPropertyNames(object))
             {
-                var descriptor = Object.getOwnPropertyDescriptor(object, propertyName);
-                if (descriptor != null && descriptor.get != null)
+                if (!Object.getOwnPropertyDescriptor(object, propertyName))
                 {
-                    continue;
-                }
-                data = object[propertyName];
-                if (data != null && data.__prop__unready__)
-                {
-                    delete data.__prop__unready__;
-                    createProperty(propertyName, data);
+                    data = object[propertyName];
+                    if (data != null && data.__prop__unready__)
+                    {
+                        delete data.__prop__unready__;
+                        createProperty(propertyName, data);
+                    }
                 }
             }
             return;
         }
 
+        // Create and return property builder
         data = <Propjet.IPropData<T>>{};
         data.__prop__unready__ = true;
-
         var builder = <Propjet.IAllOperators<any>>{
             "require": (...args: any[]) =>
             {
@@ -109,28 +109,48 @@ declare module Propjet
                 set: setter
             });
 
+            function emptyValue(value: any): number
+            {
+                if (value === undefined)
+                {
+                    return 1;
+                }
+                if (value == null)
+                {
+                    return 2;
+                }
+                if (typeof value === 'number' && isNaN(value))
+                {
+                    return 3;
+                }
+                return 0;
+            }
+
             function getter()
             {
-                if (data.stage === Propjet.Stage.setting)
+                if (data.stage === Propjet.Stage.Setting)
                 {
                     return data.lastResult;
                 }
-                if (data.stage === Propjet.Stage.getting)
+                if (data.stage === Propjet.Stage.Getting)
                 {
                     throw new Error("Recursive property read");
                 }
-                data.stage = Propjet.Stage.getting;
+                data.stage = Propjet.Stage.Getting;
                 try {
+                    // Property without getter
                     if (!data.getter)
                     {
                         if (data.initialResult)
                         {
-                            data.lastResult = data.initialResult();
+                            data.lastResult = data.initialResult.call(object);
                             data.initialResult = undefined;
                         }
                         return data.lastResult;
                     }
-                    var same = data.lastArgs && data.lastArgs.length === data.requirements.length;
+
+                    // Check requirements' changes
+                    var same = data.lastArgs && data.requirements && data.lastArgs.length === data.requirements.length;
                     if (!same)
                     {
                         data.lastArgs = undefined;
@@ -141,19 +161,28 @@ declare module Propjet
                         args = [];
                         for (var i in data.requirements)
                         {
-                            var func = data.requirements[i];
+                            var requirement = data.requirements[i];
                             var oldArg = data.lastArgs != null ? data.lastArgs[i] : undefined;
-                            var newArg = <Propjet.IVersionValue>func(oldArg != null ? oldArg.value : undefined);
+                            var newArg = <Propjet.IVersionValue>requirement(oldArg != null ? oldArg.value : undefined);
                             args.push(newArg);
                             if (same)
                             {
-                                same =
-                                oldArg.value === newArg &&
-                                oldArg.__prop__ver__ === newArg.__prop__ver__ &&
-                                oldArg.length === newArg.length;
+                                var oldEmpty = emptyValue(oldArg.value);
+                                var newEmpty = emptyValue(newArg);
+                                if (oldEmpty !== newEmpty)
+                                {
+                                    same =
+                                    !oldEmpty &&
+                                    !newEmpty &&
+                                    oldArg.value === newArg &&
+                                    oldArg.__prop__ver__ === newArg.__prop__ver__ &&
+                                    oldArg.length === newArg.length;
+                                }
                             }
                         }
                     }
+
+                    // Store last arguments and result
                     if (!same)
                     {
                         var newArgs: Propjet.IVersionValue[];
@@ -162,18 +191,21 @@ declare module Propjet
                             newArgs = [];
                             (<Propjet.IVersionValue[]>args).forEach(arg => newArgs.push({
                                 value: arg,
-                                __prop__ver__: arg.__prop__ver__,
-                                length: arg.length
+                                __prop__ver__: arg != null ? arg.__prop__ver__ : undefined,
+                                length: arg != null ? arg.length : undefined
                             }));
                         }
-                        var newResult = data.getter.apply(undefined, args);
+                        var newResult = data.getter.apply(object, args);
+
+                        // Filter new result
                         if (data.filter)
                         {
-                            newResult = data.filter(newResult, data.lastResult);
+                            newResult = data.filter.call(object, newResult, data.lastResult);
                         }
                         data.lastArgs = newArgs;
                         data.lastResult = newResult;
                     }
+
                     return data.lastResult;
                 }
                 finally
@@ -188,26 +220,33 @@ declare module Propjet
                 {
                     throw new Error("Recursive property write");
                 }
-                data.stage = Propjet.Stage.setting;
+                data.stage = Propjet.Stage.Setting;
                 try {
+                    // Override property
                     if (newResult != null && (<Propjet.IPropData<any>>newResult).__prop__unready__)
                     {
                         data = newResult;
                         delete data.__prop__unready__;
                         return;
                     }
+
+                    // Filter new value
                     if (data.filter)
                     {
-                        newResult = data.filter(newResult, data.lastResult);
+                        newResult = data.filter.call(object, newResult, data.lastResult);
                     }
+
+                    // Property without getter
                     if (!data.getter)
                     {
                         data.lastResult = newResult;
                         data.initialResult = undefined;
                     }
+
+                    // Call setter
                     if (data.setter)
                     {
-                        data.setter(newResult, data.lastResult);
+                        data.setter.call(object, newResult, data.lastResult);
                     }
                     else if (data.getter)
                     {
@@ -224,17 +263,24 @@ declare module Propjet
 
     propjet.invalidate = value =>
     {
-        if (value == null || typeof value !== "object")
+        // Value types can not be invalidated
+        var valueType = typeof value;
+        if (valueType !== "object" && valueType !== "function")
         {
             return;
         }
+
+        // Object already contains version
         var ver = (<Propjet.IVersionValue>value).__prop__ver__;
         if (ver != null)
         {
+            // Reset to zero when it overflows
             var newVer = ver + 1;
             (<Propjet.IVersionValue>value).__prop__ver__ = newVer !== ver ? newVer : 0;
             return;
         }
+
+        // Create non-enumerable version property
         var obj = <Propjet.IVersionValue>{ __prop__ver__: 0 };
         Object.defineProperty(value, Object.getOwnPropertyNames(obj)[0], {
             value: 1,

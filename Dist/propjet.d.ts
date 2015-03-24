@@ -1,5 +1,5 @@
 /*
- propjet.js 0.2
+ propjet.js 0.3
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
@@ -7,17 +7,29 @@ declare module Propjet
 {
     export interface IPropjet
     {
+        /**
+         * Declares uninitialized property.
+         */
         <T>(): Propjet.IRequireDefaultGetOperator<T>;
-        <T>(object: Object, propertyName: string): Propjet.IRequireDefaultGetOperator<T>;
+        /**
+         * Initializes all declared properties in specified object.
+         */
         <TObject>(object: TObject): void;
+        /**
+         * Declares property and initializes it in specified object.
+         */
+        <T>(object: Object, propertyName: string): Propjet.IRequireDefaultGetOperator<T>;
+        /**
+         * Invalidates the object value so all dependent properties will be updated.
+         */
         invalidate<T>(value: T): void;
     }
 
     export interface IRequireOperator<T>
     {
-        require(): IGetOperator<T>
+        require(): IGetOperator<T>;
         require<TIn1>(
-            a: (oldIn?: TIn1) => TIn1): IGetOperator1<T, TIn1>
+            a: (oldIn?: TIn1) => TIn1): IGetOperator1<T, TIn1>;
         require<TIn1, TIn2>(
             a: (oldIn?: TIn1) => TIn1,
             b: (oldIn?: TIn2) => TIn2): IGetOperator2<T, TIn1, TIn2>;

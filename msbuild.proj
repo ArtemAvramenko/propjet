@@ -2,6 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/MsBuild/2003" ToolsVersion="4.0">
 
   <UsingTask TaskName="JavaScriptCompressorTask" AssemblyFile="packages\YUICompressor.NET.MSBuild.2.7.0.0\lib\NET20\Yahoo.Yui.Compressor.Build.MsBuild.dll" />
+  <UsingTask TaskName="Zip" AssemblyFile="packages\MSBuildTasks.1.4.0.88\tools\MSBuild.Community.Tasks.dll" />
 
   <Target Name="Build">
 
@@ -26,6 +27,11 @@
       CompressionType="None"
       SourceFiles="version.js;Src\propjet.d.ts"
       OutputFile="Dist\propjet.d.ts" />
+
+    <CreateItem Include="Dist\*.*" >
+      <Output ItemName="ZipFiles" TaskParameter="Include"/>
+    </CreateItem>
+    <Zip ZipFileName="PropjetJS.zip" Files="@(ZipFiles)" Flatten="true" ZipLevel="9" />
 
   </Target>
 </Project>
