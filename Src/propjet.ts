@@ -38,13 +38,15 @@ declare module Propjet
     {
         var data: Propjet.IPropData<T>;
 
-        // Create properties for all IPropData fields in object
+        // create properties for all IPropData fields in object
         if (object && !propertyName)
         {
-            // Enumerate all own fields skipping properties
-            for (propertyName in Object.getOwnPropertyNames(object))
+            // enumerate all own fields
+            Object.getOwnPropertyNames(object).forEach(propertyName =>
             {
-                if (!Object.getOwnPropertyDescriptor(object, propertyName))
+                // do not call getters
+                var descriptor = Object.getOwnPropertyDescriptor(object, propertyName);
+                if (!descriptor || !descriptor.get)
                 {
                     data = object[propertyName];
                     if (data != null && data.__prop__unready__)
@@ -53,11 +55,11 @@ declare module Propjet
                         createProperty(propertyName, data);
                     }
                 }
-            }
+            });
             return;
         }
 
-        // Create and return property builder
+        // create and return property builder
         data = <Propjet.IPropData<T>>{};
         data.__prop__unready__ = true;
         var builder = <Propjet.IAllOperators<any>>{
@@ -119,7 +121,7 @@ declare module Propjet
                 {
                     return 2;
                 }
-                if (typeof value === 'number' && isNaN(value))
+                if (typeof value === "number" && isNaN(value))
                 {
                     return 3;
                 }
@@ -138,7 +140,7 @@ declare module Propjet
                 }
                 data.stage = Propjet.Stage.Getting;
                 try {
-                    // Property without getter
+                    // property without getter
                     if (!data.getter)
                     {
                         if (data.initialResult)
@@ -149,7 +151,7 @@ declare module Propjet
                         return data.lastResult;
                     }
 
-                    // Check requirements' changes
+                    // check requirements' changes
                     var same = data.lastArgs && data.requirements && data.lastArgs.length === data.requirements.length;
                     if (!same)
                     {
@@ -169,7 +171,7 @@ declare module Propjet
                             {
                                 var oldEmpty = emptyValue(oldArg.value);
                                 var newEmpty = emptyValue(newArg);
-                                if (oldEmpty !== newEmpty)
+                                if (!newEmpty || newEmpty !== oldEmpty)
                                 {
                                     same =
                                     !oldEmpty &&
@@ -182,7 +184,7 @@ declare module Propjet
                         }
                     }
 
-                    // Store last arguments and result
+                    // store last arguments and result
                     if (!same)
                     {
                         var newArgs: Propjet.IVersionValue[];
@@ -197,7 +199,7 @@ declare module Propjet
                         }
                         var newResult = data.getter.apply(object, args);
 
-                        // Filter new result
+                        // filter new result
                         if (data.filter)
                         {
                             newResult = data.filter.call(object, newResult, data.lastResult);
@@ -222,7 +224,7 @@ declare module Propjet
                 }
                 data.stage = Propjet.Stage.Setting;
                 try {
-                    // Override property
+                    // override property
                     if (newResult != null && (<Propjet.IPropData<any>>newResult).__prop__unready__)
                     {
                         data = newResult;
@@ -230,20 +232,20 @@ declare module Propjet
                         return;
                     }
 
-                    // Filter new value
+                    // filter new value
                     if (data.filter)
                     {
                         newResult = data.filter.call(object, newResult, data.lastResult);
                     }
 
-                    // Property without getter
+                    // property without getter
                     if (!data.getter)
                     {
                         data.lastResult = newResult;
                         data.initialResult = undefined;
                     }
 
-                    // Call setter
+                    // call setter
                     if (data.setter)
                     {
                         data.setter.call(object, newResult, data.lastResult);
@@ -263,24 +265,24 @@ declare module Propjet
 
     propjet.invalidate = value =>
     {
-        // Value types can not be invalidated
+        // value types can not be invalidated
         var valueType = typeof value;
         if (valueType !== "object" && valueType !== "function")
         {
             return;
         }
 
-        // Object already contains version
+        // object already contains version
         var ver = (<Propjet.IVersionValue>value).__prop__ver__;
         if (ver != null)
         {
-            // Reset to zero when it overflows
+            // reset to zero when it overflows
             var newVer = ver + 1;
             (<Propjet.IVersionValue>value).__prop__ver__ = newVer !== ver ? newVer : 0;
             return;
         }
 
-        // Create non-enumerable version property
+        // create non-enumerable version property
         var obj = <Propjet.IVersionValue>{ __prop__ver__: 0 };
         Object.defineProperty(value, Object.getOwnPropertyNames(obj)[0], {
             value: 1,

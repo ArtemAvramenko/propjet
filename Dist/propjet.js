@@ -1,25 +1,28 @@
 /*
- propjet.js 0.3
+ propjet.js 0.4
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
 this.propjet = (function () {
     var propjet = (function (object, propertyName) {
         var data;
-        // Create properties for all IPropData fields in object
+        // create properties for all IPropData fields in object
         if (object && !propertyName) {
-            for (propertyName in Object.getOwnPropertyNames(object)) {
-                if (!Object.getOwnPropertyDescriptor(object, propertyName)) {
+            // enumerate all own fields
+            Object.getOwnPropertyNames(object).forEach(function (propertyName) {
+                // do not call getters
+                var descriptor = Object.getOwnPropertyDescriptor(object, propertyName);
+                if (!descriptor || !descriptor.get) {
                     data = object[propertyName];
                     if (data != null && data.__prop__unready__) {
                         delete data.__prop__unready__;
                         createProperty(propertyName, data);
                     }
                 }
-            }
+            });
             return;
         }
-        // Create and return property builder
+        // create and return property builder
         data = {};
         data.__prop__unready__ = true;
         var builder = {
@@ -71,7 +74,7 @@ this.propjet = (function () {
                 if (value == null) {
                     return 2;
                 }
-                if (typeof value === 'number' && isNaN(value)) {
+                if (typeof value === "number" && isNaN(value)) {
                     return 3;
                 }
                 return 0;
@@ -85,7 +88,7 @@ this.propjet = (function () {
                 }
                 data.stage = 1 /* Getting */;
                 try {
-                    // Property without getter
+                    // property without getter
                     if (!data.getter) {
                         if (data.initialResult) {
                             data.lastResult = data.initialResult.call(object);
@@ -93,7 +96,7 @@ this.propjet = (function () {
                         }
                         return data.lastResult;
                     }
-                    // Check requirements' changes
+                    // check requirements' changes
                     var same = data.lastArgs && data.requirements && data.lastArgs.length === data.requirements.length;
                     if (!same) {
                         data.lastArgs = undefined;
@@ -109,13 +112,13 @@ this.propjet = (function () {
                             if (same) {
                                 var oldEmpty = emptyValue(oldArg.value);
                                 var newEmpty = emptyValue(newArg);
-                                if (oldEmpty !== newEmpty) {
+                                if (!newEmpty || newEmpty !== oldEmpty) {
                                     same = !oldEmpty && !newEmpty && oldArg.value === newArg && oldArg.__prop__ver__ === newArg.__prop__ver__ && oldArg.length === newArg.length;
                                 }
                             }
                         }
                     }
-                    // Store last arguments and result
+                    // store last arguments and result
                     if (!same) {
                         var newArgs;
                         if (args) {
@@ -127,7 +130,7 @@ this.propjet = (function () {
                             }); });
                         }
                         var newResult = data.getter.apply(object, args);
-                        // Filter new result
+                        // filter new result
                         if (data.filter) {
                             newResult = data.filter.call(object, newResult, data.lastResult);
                         }
@@ -146,22 +149,22 @@ this.propjet = (function () {
                 }
                 data.stage = 2 /* Setting */;
                 try {
-                    // Override property
+                    // override property
                     if (newResult != null && newResult.__prop__unready__) {
                         data = newResult;
                         delete data.__prop__unready__;
                         return;
                     }
-                    // Filter new value
+                    // filter new value
                     if (data.filter) {
                         newResult = data.filter.call(object, newResult, data.lastResult);
                     }
-                    // Property without getter
+                    // property without getter
                     if (!data.getter) {
                         data.lastResult = newResult;
                         data.initialResult = undefined;
                     }
-                    // Call setter
+                    // call setter
                     if (data.setter) {
                         data.setter.call(object, newResult, data.lastResult);
                     }
@@ -176,20 +179,20 @@ this.propjet = (function () {
         }
     });
     propjet.invalidate = function (value) {
-        // Value types can not be invalidated
+        // value types can not be invalidated
         var valueType = typeof value;
         if (valueType !== "object" && valueType !== "function") {
             return;
         }
-        // Object already contains version
+        // object already contains version
         var ver = value.__prop__ver__;
         if (ver != null) {
-            // Reset to zero when it overflows
+            // reset to zero when it overflows
             var newVer = ver + 1;
             value.__prop__ver__ = newVer !== ver ? newVer : 0;
             return;
         }
-        // Create non-enumerable version property
+        // create non-enumerable version property
         var obj = { __prop__ver__: 0 };
         Object.defineProperty(value, Object.getOwnPropertyNames(obj)[0], {
             value: 1,
