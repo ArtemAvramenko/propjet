@@ -51,7 +51,6 @@ declare module Propjet
                     data = object[propertyName];
                     if (data != null && data.__prop__unready__)
                     {
-                        delete data.__prop__unready__;
                         createProperty(propertyName, data);
                     }
                 }
@@ -104,6 +103,8 @@ declare module Propjet
 
         function createProperty(propertyName: string, data: Propjet.IPropData<any>)
         {
+            delete data.__prop__unready__;
+
             Object.defineProperty(object, propertyName, {
                 configurable: true,
                 enumerable: true,
@@ -171,10 +172,13 @@ declare module Propjet
                             {
                                 var oldEmpty = emptyValue(oldArg.value);
                                 var newEmpty = emptyValue(newArg);
-                                if (!newEmpty || newEmpty !== oldEmpty)
+                                if (oldEmpty)
+                                {
+                                    same = oldEmpty === newEmpty;
+                                }
+                                else
                                 {
                                     same =
-                                    !oldEmpty &&
                                     !newEmpty &&
                                     oldArg.value === newArg &&
                                     oldArg.__prop__ver__ === newArg.__prop__ver__ &&
@@ -283,8 +287,7 @@ declare module Propjet
         }
 
         // create non-enumerable version property
-        var obj = <Propjet.IVersionValue>{ __prop__ver__: 0 };
-        Object.defineProperty(value, Object.getOwnPropertyNames(obj)[0], {
+        Object.defineProperty(value, "__prop__ver__", {
             value: 1,
             configurable: true,
             writable: true

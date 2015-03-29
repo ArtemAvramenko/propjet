@@ -1,5 +1,5 @@
 /*
- propjet.js 0.4
+ propjet.js 0.5
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
@@ -15,7 +15,6 @@ this.propjet = (function () {
                 if (!descriptor || !descriptor.get) {
                     data = object[propertyName];
                     if (data != null && data.__prop__unready__) {
-                        delete data.__prop__unready__;
                         createProperty(propertyName, data);
                     }
                 }
@@ -61,6 +60,7 @@ this.propjet = (function () {
         };
         return builder;
         function createProperty(propertyName, data) {
+            delete data.__prop__unready__;
             Object.defineProperty(object, propertyName, {
                 configurable: true,
                 enumerable: true,
@@ -112,8 +112,11 @@ this.propjet = (function () {
                             if (same) {
                                 var oldEmpty = emptyValue(oldArg.value);
                                 var newEmpty = emptyValue(newArg);
-                                if (!newEmpty || newEmpty !== oldEmpty) {
-                                    same = !oldEmpty && !newEmpty && oldArg.value === newArg && oldArg.__prop__ver__ === newArg.__prop__ver__ && oldArg.length === newArg.length;
+                                if (oldEmpty) {
+                                    same = oldEmpty === newEmpty;
+                                }
+                                else {
+                                    same = !newEmpty && oldArg.value === newArg && oldArg.__prop__ver__ === newArg.__prop__ver__ && oldArg.length === newArg.length;
                                 }
                             }
                         }
@@ -193,8 +196,7 @@ this.propjet = (function () {
             return;
         }
         // create non-enumerable version property
-        var obj = { __prop__ver__: 0 };
-        Object.defineProperty(value, Object.getOwnPropertyNames(obj)[0], {
+        Object.defineProperty(value, "__prop__ver__", {
             value: 1,
             configurable: true,
             writable: true

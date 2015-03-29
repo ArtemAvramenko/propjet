@@ -20,11 +20,17 @@
     <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="content\jasmine.css" />
     <Content Include="demo.css" />
     <Content Include="index.html" />
+    <Content Include="jasmine.html" />
     <Content Include="Scripts\angular-mocks.js" />
     <Content Include="Scripts\angular.js" />
     <Content Include="Scripts\angular.min.js" />
+    <Content Include="Scripts\boot.js" />
+    <Content Include="Scripts\console.js" />
+    <Content Include="Scripts\jasmine-html.js" />
+    <Content Include="Scripts\jasmine.js" />
     <Content Include="version.js" />
     <Content Include="web.config" />
   </ItemGroup>
@@ -37,7 +43,9 @@
     <TypeScriptCompile Include="Scripts\typings\angularjs\angular-route.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\angularjs\angular-sanitize.d.ts" />
     <TypeScriptCompile Include="Scripts\typings\angularjs\angular.d.ts" />
+    <TypeScriptCompile Include="Scripts\typings\jasmine\jasmine.d.ts" />
     <TypeScriptCompile Include="Src\propjet.d.ts" />
+    <TypeScriptCompile Include="Src\propjet.spec.ts" />
     <TypeScriptCompile Include="Src\propjet.ts" />
     <TypeScriptCompile Include="Scripts\typings\jquery\jquery.d.ts" />
   </ItemGroup>
@@ -104,6 +112,7 @@
     <TypeScriptSourceMap>True</TypeScriptSourceMap>
     <TypeScriptRemoveComments>False</TypeScriptRemoveComments>
     <Prefer32Bit>false</Prefer32Bit>
+    <TypeScriptTarget>ES5</TypeScriptTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <TypeScriptSourceMap>false</TypeScriptSourceMap>
