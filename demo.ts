@@ -29,7 +29,7 @@ class DemoController
 
     nowText = propjet<string>().
         require(() => this.now).
-        get(date => date.getHours() + ":" + date.getMinutes()).
+        get(date => ("0" + date.getHours()).slice(-2) + ":" + ("0" + date.getMinutes()).slice(-2)).
         declare();
 
     firstName = propjet<string>().

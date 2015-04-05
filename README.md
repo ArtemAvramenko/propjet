@@ -1,6 +1,8 @@
 #propjet.js
 JavaScript/TypeScript library for declaring reactive properties.
 
+Supports function mode for outdated browsers (IE8 and below).
+
 Code licensed under [MIT License](LICENSE).
 
 #Installing
@@ -27,6 +29,10 @@ class Person
         require(() => this.firstName, () => this.lastName).
         get((firstName, lastName) => (firstName + " " + lastName).trim()).
         declare();
+
+    propIE8 = propjet<string>().
+        default(() => "Hello, IE!").
+        declare(true); // function mode: get - propIE8(), set - propIE8(newValue)
 }
 ```
 more - [AngularJS demo](demo.ts)
