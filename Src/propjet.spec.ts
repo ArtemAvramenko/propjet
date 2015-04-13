@@ -78,7 +78,12 @@ class TestClass
 
     arrayLength = propjet<number>().
         require(() => this.array).
-        get(a => a.length).
+        get(
+        a =>
+        {
+            this.callCount++;
+            return a.length;
+        }).
         declare();
 
     filterValue = propjet<number>().
@@ -216,5 +221,20 @@ describe("propjet",() =>
         expect(obj.cacheGet).toBeNull();
         obj.backingValue = undefined;
         expect(obj.cacheGet).toBeUndefined();
+    });
+
+    it("treats empty arrays as equal",() =>
+    {
+        obj.array = [];
+        expect(obj.arrayLength).toBe(0);
+        obj.array = [];
+        expect(obj.arrayLength).toBe(0);
+        expect(obj.callCount).toBe(1);
+        propjet.invalidate(obj.array);
+        expect(obj.arrayLength).toBe(0);
+        expect(obj.callCount).toBe(2);
+        obj.array = [1];
+        expect(obj.arrayLength).toBe(1);
+        expect(obj.callCount).toBe(3);
     });
 });

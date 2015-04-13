@@ -1,5 +1,5 @@
 /*
- propjet.js 0.6
+ propjet.js 0.7
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
@@ -125,7 +125,7 @@ this.propjet = (function () {
                 if (functionMode) {
                     return createProperty(propertyName, data, true);
                 }
-                else if (propertyName) {
+                if (propertyName) {
                     createProperty(propertyName, data);
                 }
                 else {
@@ -169,8 +169,14 @@ this.propjet = (function () {
                 if (value == null) {
                     return 2;
                 }
-                if (typeof value === "number" && isNaN(value)) {
+                if (value.length === 0 && getVersion(value) == null) {
+                    for (var i in value) {
+                        return 0;
+                    }
                     return 3;
+                }
+                if (typeof value === "number" && isNaN(value)) {
+                    return 4;
                 }
                 return 0;
             }
@@ -298,7 +304,7 @@ this.propjet = (function () {
         if (ver != null) {
             newVer = ver + 1;
             if (newVer === ver) {
-                // reset to zero when it overflows
+                // reset to one when it overflows
                 newVer = 1;
             }
         }

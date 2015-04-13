@@ -9,17 +9,17 @@ declare module Propjet
         (oldValue?: any): any;
     }
 
-    export interface IVersionObject extends Object
-    {
-        __prop__ver__: number;
-        length: number;
-    }
-
     export interface ISourceValue
     {
         val: any;
         len: number;
         ver: number;
+    }
+
+    export interface IVersionObject extends Object
+    {
+        __prop__ver__: number;
+        length: number;
     }
 
     export interface IPropData<T>
@@ -34,20 +34,25 @@ declare module Propjet
         set: (newValue: T) => void;
         fltr: (newValue: T, oldValue?: T) => T;
     }
+
+    export interface IForEachCallback<T>
+    {
+        (value: T, index: number): void;
+    }
 }
 
 (<any>this).propjet = (() =>
 {
     // enumerates all elements in array
-    var forEach: <T>(items: T[], callback: (value: T, index: number) => void) => void;
+    var forEach: <T>(items: T[], callback: Propjet.IForEachCallback<T>) => void;
     // #region cross-browser implementation
     if ([].forEach)
     {
-        forEach = (items: any[], callback) => items.forEach(callback);
+        forEach = (items: any[], callback: Propjet.IForEachCallback<any>) => items.forEach(callback);
     }
     else
     {
-        forEach = (items: any[], callback) =>
+        forEach = (items: any[], callback: Propjet.IForEachCallback<any>) =>
         {
             var itemCount = items.length;
             for (var i = 0; i < itemCount; i++)
@@ -194,7 +199,7 @@ declare module Propjet
                 {
                     return createProperty(propertyName, data, true);
                 }
-                else if (propertyName)
+                if (propertyName)
                 {
                     createProperty(propertyName, data);
                 }
@@ -258,9 +263,17 @@ declare module Propjet
                 {
                     return 2;
                 }
+                if (value.length === 0 && getVersion(value) == null)
+                {
+                    for (var i in value)
+                    {
+                        return 0;
+                    }
+                    return 3;
+                }
                 if (typeof value === "number" && isNaN(value))
                 {
-                    return 3;
+                    return 4;
                 }
                 return 0;
             }
@@ -434,7 +447,7 @@ declare module Propjet
             newVer = ver + 1;
             if (newVer === ver)
             {
-                // reset to zero when it overflows
+                // reset to one when it overflows
                 newVer = 1;
             }
         }
