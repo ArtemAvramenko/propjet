@@ -1,5 +1,5 @@
 /*
- propjet.js 0.7
+ propjet.js 0.8
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
@@ -180,6 +180,44 @@ this.propjet = (function () {
                 }
                 return 0;
             }
+            function getArgs(args) {
+                if (!data.src) {
+                    return false;
+                }
+                // check requirements' changes
+                var same = data.vals && data.vals.length === data.src.length;
+                var ignoreOldValues = !same;
+                forEach(data.src, function (source, i) {
+                    var old = ignoreOldValues ? undefined : data.vals[i];
+                    var arg = source.call(object, old != null ? old.val : undefined);
+                    args[i] = arg;
+                    if (same) {
+                        var oldEmpty = emptyValue(old.val);
+                        var newEmpty = emptyValue(arg);
+                        if (oldEmpty) {
+                            same = oldEmpty === newEmpty;
+                        }
+                        else {
+                            same = !newEmpty && old.val === arg && old.ver === getVersion(arg) && old.len === arg.length;
+                        }
+                    }
+                });
+                return same;
+            }
+            function saveArgs(args) {
+                var sourceValues;
+                if (data.src) {
+                    sourceValues = [];
+                    forEach(args, function (arg, i) {
+                        sourceValues[i] = {
+                            val: arg,
+                            ver: arg != null ? getVersion(arg) : undefined,
+                            len: arg != null ? arg.length : undefined
+                        };
+                    });
+                }
+                data.vals = sourceValues;
+            }
             function getter() {
                 if (data.lvl) {
                     if (data.lvl === nestingLevel) {
@@ -190,60 +228,35 @@ this.propjet = (function () {
                 nestingLevel++;
                 try {
                     data.lvl = nestingLevel;
+                    var args = [];
+                    var same = getArgs(args);
                     // property without getter
                     if (!data.get) {
+                        // has initializer
                         if (data.init) {
-                            data.res = data.init.call(object);
-                            delete data.init;
-                        }
-                        return data.res;
-                    }
-                    // check requirements' changes
-                    var same = data.vals && data.src && data.vals.length === data.src.length;
-                    if (!same) {
-                        data.vals = undefined;
-                    }
-                    var args;
-                    if (data.src) {
-                        args = [];
-                        forEach(data.src, function (source, i) {
-                            var old = data.vals != null ? data.vals[i] : undefined;
-                            var arg = source.call(object, old != null ? old.val : undefined);
-                            args[i] = arg;
-                            if (same) {
-                                var oldEmpty = emptyValue(old.val);
-                                var newEmpty = emptyValue(arg);
-                                if (oldEmpty) {
-                                    same = oldEmpty === newEmpty;
-                                }
-                                else {
-                                    same = !newEmpty && old.val === arg && old.ver === getVersion(arg) && old.len === arg.length;
+                            if (data.src) {
+                                // has requirements - reinitialize on change
+                                if (!same) {
+                                    data.res = data.init.call(object);
+                                    saveArgs(args);
                                 }
                             }
-                        });
+                            else {
+                                // no requirement - call init once
+                                data.res = data.init.call(object);
+                                data.init = undefined;
+                            }
+                        }
                     }
-                    // store last arguments and result
-                    if (!same) {
-                        var sourceValues;
-                        if (args) {
-                            sourceValues = [];
-                            forEach(args, function (arg, i) {
-                                sourceValues[i] = {
-                                    val: arg,
-                                    ver: arg != null ? getVersion(arg) : undefined,
-                                    len: arg != null ? arg.length : undefined
-                                };
-                            });
-                        }
-                        else {
-                            args = [];
-                        }
+                    else if (!same) {
+                        // call getter
                         var newResult = data.get.apply(object, args);
                         // filter new result
                         if (data.fltr) {
                             newResult = data.fltr.call(object, newResult, data.res);
                         }
-                        data.vals = sourceValues;
+                        // store last arguments and result
+                        saveArgs(args);
                         data.res = newResult;
                     }
                     return data.res;
@@ -279,8 +292,15 @@ this.propjet = (function () {
                     }
                     if (!data.get) {
                         // property without getter
+                        if (data.src) {
+                            var args = [];
+                            getArgs(args);
+                            saveArgs(args);
+                        }
+                        else {
+                            data.init = undefined;
+                        }
                         data.res = value;
-                        data.init = undefined;
                     }
                 }
                 finally {

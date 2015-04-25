@@ -1,7 +1,7 @@
 declare module Propjet
 {
     export interface IPropertyBuilder<T>
-        extends IRequire<T>, IDefault<T>, IGet<T>, IDeclare<T>, ISet<T>, IWith<T>
+        extends IRequire<T>, IDefault<T>, IGetOrDefault<T>, IDeclare<T>, ISet<T>, IWith<T>
     { }
 
     export interface ISource
@@ -265,7 +265,9 @@ declare module Propjet
                 }
                 if (value.length === 0 && getVersion(value) == null)
                 {
+                    /* tslint:disable */
                     for (var i in value)
+                    /* tslint:enable */
                     {
                         return 0;
                     }
@@ -276,6 +278,59 @@ declare module Propjet
                     return 4;
                 }
                 return 0;
+            }
+
+            function getArgs(args: Propjet.IVersionObject[]): boolean
+            {
+                if (!data.src)
+                {
+                    return false;
+                }
+
+                // check requirements' changes
+                var same = data.vals && data.vals.length === data.src.length;
+
+                var ignoreOldValues = !same;
+
+                forEach(data.src,(source, i) =>
+                {
+                    var old = ignoreOldValues ? undefined : data.vals[i];
+                    var arg = <Propjet.IVersionObject>source.call(object, old != null ? old.val : undefined);
+                    args[i] = arg;
+                    if (same)
+                    {
+                        var oldEmpty = emptyValue(old.val);
+                        var newEmpty = emptyValue(arg);
+                        if (oldEmpty)
+                        {
+                            same = oldEmpty === newEmpty;
+                        }
+                        else
+                        {
+                            same = !newEmpty && old.val === arg && old.ver === getVersion(arg) && old.len === arg.length;
+                        }
+                    }
+                });
+
+                return same;
+            }
+
+            function saveArgs(args: Propjet.IVersionObject[])
+            {
+                var sourceValues: Propjet.ISourceValue[];
+                if (data.src)
+                {
+                    sourceValues = [];
+                    forEach(args,(arg, i) =>
+                    {
+                        sourceValues[i] = {
+                            val: arg,
+                            ver: arg != null ? getVersion(arg) : undefined,
+                            len: arg != null ? arg.length : undefined
+                        };
+                    });
+                }
+                data.vals = sourceValues;
             }
 
             function getter(): T
@@ -292,69 +347,35 @@ declare module Propjet
                 try {
                     data.lvl = nestingLevel;
 
+                    var args: Propjet.IVersionObject[] = [];
+                    var same = getArgs(args);
+
                     // property without getter
                     if (!data.get)
                     {
+                        // has initializer
                         if (data.init)
                         {
-                            data.res = data.init.call(object);
-                            delete data.init;
-                        }
-                        return data.res;
-                    }
-
-                    // check requirements' changes
-                    var same = data.vals && data.src && data.vals.length === data.src.length;
-                    if (!same)
-                    {
-                        data.vals = undefined;
-                    }
-                    var args: Propjet.IVersionObject[];
-
-                    if (data.src)
-                    {
-                        args = [];
-                        forEach(data.src,(source, i) =>
-                        {
-                            var old = data.vals != null ? data.vals[i] : undefined;
-                            var arg = <Propjet.IVersionObject>source.call(object, old != null ? old.val : undefined);
-                            args[i] = arg;
-                            if (same)
+                            if (data.src)
                             {
-                                var oldEmpty = emptyValue(old.val);
-                                var newEmpty = emptyValue(arg);
-                                if (oldEmpty)
+                                // has requirements - reinitialize on change
+                                if (!same)
                                 {
-                                    same = oldEmpty === newEmpty;
-                                }
-                                else
-                                {
-                                    same = !newEmpty && old.val === arg && old.ver === getVersion(arg) && old.len === arg.length;
+                                    data.res = data.init.call(object);
+                                    saveArgs(args);
                                 }
                             }
-                        });
-                    }
-
-                    // store last arguments and result
-                    if (!same)
-                    {
-                        var sourceValues: Propjet.ISourceValue[];
-                        if (args)
-                        {
-                            sourceValues = [];
-                            forEach(args,(arg, i) =>
+                            else
                             {
-                                sourceValues[i] = {
-                                    val: arg,
-                                    ver: arg != null ? getVersion(arg) : undefined,
-                                    len: arg != null ? arg.length : undefined
-                                };
-                            });
+                                // no requirement - call init once
+                                data.res = data.init.call(object);
+                                data.init = undefined;
+                            }
                         }
-                        else
-                        {
-                            args = [];
-                        }
+                    }
+                    else if (!same)
+                    {
+                        // call getter
                         var newResult = data.get.apply(object, args);
 
                         // filter new result
@@ -362,7 +383,9 @@ declare module Propjet
                         {
                             newResult = data.fltr.call(object, newResult, data.res);
                         }
-                        data.vals = sourceValues;
+
+                        // store last arguments and result
+                        saveArgs(args);
                         data.res = newResult;
                     }
 
@@ -413,8 +436,17 @@ declare module Propjet
                     if (!data.get)
                     {
                         // property without getter
+                        if (data.src)
+                        {
+                            var args: Propjet.IVersionObject[] = [];
+                            getArgs(args);
+                            saveArgs(args);
+                        }
+                        else
+                        {
+                            data.init = undefined;
+                        }
                         data.res = value;
-                        data.init = undefined;
                     }
                 }
                 finally

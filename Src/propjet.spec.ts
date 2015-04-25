@@ -23,7 +23,7 @@ class TestClass
         () =>
         {
             this.callCount++;
-            return this.backingValue
+            return this.backingValue;
         }).
         declare();
 
@@ -88,6 +88,11 @@ class TestClass
 
     filterValue = propjet<number>().
         with((newValue, oldValue) => newValue || oldValue).
+        declare();
+
+    initializableValue = propjet<number>().
+        require(() => this.backingValue).
+        default(() => 0).
         declare();
 }
 
@@ -236,5 +241,23 @@ describe("propjet",() =>
         obj.array = [1];
         expect(obj.arrayLength).toBe(1);
         expect(obj.callCount).toBe(3);
+    });
+
+    it("reinitializes property on requirement change",() =>
+    {
+        expect(obj.initializableValue).toBe(0);
+        obj.initializableValue = 2;
+        expect(obj.initializableValue).toBe(2);
+        obj.backingValue = 1;
+        expect(obj.initializableValue).toBe(0);
+    });
+
+    it("does not initialize property after implicit setting",() =>
+    {
+        obj.backingValue = 1;
+        obj.initializableValue = 2;
+        expect(obj.initializableValue).toBe(2);
+        obj.backingValue = 2;
+        expect(obj.initializableValue).toBe(0);
     });
 });

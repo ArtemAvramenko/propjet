@@ -6,7 +6,9 @@ class DemoController
         this.resetName();
     }
 
+    /* tslint:disable */
     private _items = propjet<number[]>().
+    /* tslint:enable*/
         default(() => []).
         with(value => value || []).
         declare();
