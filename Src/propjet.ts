@@ -226,14 +226,15 @@ declare module Propjet
 
             if (functionMode)
             {
-                var func = (value: T) =>
+                function func(value: T)
                 {
                     if (arguments.length === 0)
                     {
                         return getter();
                     }
                     setter(value);
-                };
+                }
+
                 if (propertyName)
                 {
                     object[propertyName] = func;
@@ -289,10 +290,9 @@ declare module Propjet
 
                 // check requirements' changes
                 var same = data.vals && data.vals.length === data.src.length;
-
                 var ignoreOldValues = !same;
 
-                forEach(data.src,(source, i) =>
+                forEach(data.src, (source, i) =>
                 {
                     var old = ignoreOldValues ? undefined : data.vals[i];
                     var arg = <Propjet.IVersionObject>source.call(object, old != null ? old.val : undefined);
@@ -317,34 +317,33 @@ declare module Propjet
 
             function saveArgs(args: Propjet.IVersionObject[])
             {
-                var sourceValues: Propjet.ISourceValue[];
-                if (data.src)
+                var sourceValues: Propjet.ISourceValue[] = [];
+                forEach(args, (arg, i) =>
                 {
-                    sourceValues = [];
-                    forEach(args,(arg, i) =>
-                    {
-                        sourceValues[i] = {
-                            val: arg,
-                            ver: arg != null ? getVersion(arg) : undefined,
-                            len: arg != null ? arg.length : undefined
-                        };
-                    });
-                }
+                    sourceValues[i] = {
+                        val: arg,
+                        ver: arg != null ? getVersion(arg) : undefined,
+                        len: arg != null ? arg.length : undefined
+                    };
+                });
                 data.vals = sourceValues;
             }
 
             function getter(): T
             {
-                if (data.lvl)
+                var oldLevel = data.lvl;
+                if (oldLevel > 0)
                 {
-                    if (data.lvl === nestingLevel)
+                    if (oldLevel === nestingLevel)
                     {
                         return data.res;
                     }
                     throw new Error("Circular dependency detected");
                 }
+
                 nestingLevel++;
-                try {
+                try
+                {
                     data.lvl = nestingLevel;
 
                     var args: Propjet.IVersionObject[] = [];
@@ -385,7 +384,10 @@ declare module Propjet
                         }
 
                         // store last arguments and result
-                        saveArgs(args);
+                        if (data.src)
+                        {
+                            saveArgs(args);
+                        }
                         data.res = newResult;
                     }
 
@@ -394,7 +396,7 @@ declare module Propjet
                 finally
                 {
                     nestingLevel--;
-                    delete data.lvl;
+                    data.lvl = oldLevel;
                 }
             }
 
@@ -406,7 +408,8 @@ declare module Propjet
                 }
 
                 nestingLevel++;
-                try {
+                try
+                {
                     data.lvl = -1;
 
                     // override property
@@ -423,17 +426,14 @@ declare module Propjet
                         value = data.fltr.call(object, value, data.res);
                     }
 
-                    // call setter
-                    if (data.set)
+                    if (data.get)
                     {
-                        data.set.call(object, value);
+                        if (!data.set)
+                        {
+                            throw new Error("Attempt to write readonly property");
+                        }
                     }
-                    else if (data.get)
-                    {
-                        throw new Error("Attempt to write readonly property");
-                    }
-
-                    if (!data.get)
+                    else
                     {
                         // property without getter
                         if (data.src)
@@ -448,11 +448,17 @@ declare module Propjet
                         }
                         data.res = value;
                     }
+
+                    // call setter
+                    if (data.set)
+                    {
+                        data.set.call(object, value);
+                    }
                 }
                 finally
                 {
                     nestingLevel--;
-                    delete data.lvl;
+                    data.lvl = 0;
                 }
             }
         }

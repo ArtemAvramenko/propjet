@@ -90,13 +90,18 @@ class TestClass
         with((newValue, oldValue) => newValue || oldValue).
         declare();
 
+    setterOnly = propjet<number>().
+        default(() => 0).
+        set(value => this.backingFunction(value)).
+        declare();
+
     initializableValue = propjet<number>().
         require(() => this.backingValue).
         default(() => 0).
         declare();
 }
 
-describe("propjet",() =>
+describe("propjet", () =>
 {
     var obj: TestClass;
 
@@ -105,7 +110,7 @@ describe("propjet",() =>
         obj = new TestClass();
     });
 
-    it("supports simple getters",() =>
+    it("supports simple getters", () =>
     {
         obj.backingValue = 1;
         expect(obj.simpleGet).toBe(1);
@@ -113,14 +118,14 @@ describe("propjet",() =>
         expect(obj.simpleGet).toBe(2);
     });
 
-    it("supports lazy loading via empty requirements ",() =>
+    it("supports lazy loading via empty requirements ", () =>
     {
         expect(obj.callCount).toBe(0);
         expect(obj.fibonacciNumbers).toBe(obj.fibonacciNumbers);
         expect(obj.callCount).toBe(1);
     });
 
-    it("expects explicit invalidation on complex requirement change",() =>
+    it("expects explicit invalidation on complex requirement change", () =>
     {
         obj.backingObject = new TestClass();
         obj.backingObject.backingValue = 1;
@@ -134,7 +139,7 @@ describe("propjet",() =>
         expect(obj.objectValue).toBe(3);
     });
 
-    it("expects explicit invalidation on function requirement change",() =>
+    it("expects explicit invalidation on function requirement change", () =>
     {
         var i = 1;
         obj.backingFunction = () => i;
@@ -145,26 +150,26 @@ describe("propjet",() =>
         expect(obj.functionValue).toBe(2);
     });
 
-    it("does not need invalidation on requirement length change",() =>
+    it("does not need invalidation on requirement length change", () =>
     {
         expect(obj.arrayLength).toBe(0);
         obj.array.push(0);
         expect(obj.arrayLength).toBe(1);
     });
 
-    it("allows getting last read value in getter",() =>
+    it("allows getting last read value in getter", () =>
     {
         expect(obj.readonlyArray).toBe(obj.readonlyArray);
     });
 
-    it("allows change default value",() =>
+    it("allows change default value", () =>
     {
         expect(obj.defaultOption).toBe("on");
         obj.defaultOption = null;
         expect(obj.defaultOption).toBeNull();
     });
 
-    it("filters written values",() =>
+    it("filters written values", () =>
     {
         expect(obj.filterValue).toBeUndefined();
         obj.filterValue = 1;
@@ -175,7 +180,7 @@ describe("propjet",() =>
         expect(obj.filterValue).toBe(2);
     });
 
-    it("allows property overriding",() =>
+    it("allows property overriding", () =>
     {
         var a = [];
         expect(obj.readonlyArray).toBeDefined();
@@ -184,12 +189,12 @@ describe("propjet",() =>
         expect(obj.readonlyArray).toBe(a);
     });
 
-    it("throws error on writing readonly property",() =>
+    it("throws error on writing readonly property", () =>
     {
         expect(() => obj.readonlyArray = []).toThrowError("Attempt to write readonly property");
     });
 
-    it("throws error on circular dependency",() =>
+    it("throws error on circular dependency", () =>
     {
         var v;
         propjet<number>(obj, "x").get(() => obj.functionValue).declare();
@@ -197,20 +202,20 @@ describe("propjet",() =>
         expect(() => v = obj.functionValue).toThrowError("Circular dependency detected");
     });
 
-    it("throws error on recursive property write",() =>
+    it("throws error on recursive property write", () =>
     {
         obj.backingFunction = (x: number) => obj.functionValue = x;
         expect(() => obj.functionValue = 1).toThrowError("Recursive property write");
     });
 
-    it("has alias for 'with' method",() =>
+    it("has alias for 'with' method", () =>
     {
         var p = propjet<any>();
         expect(p.with).toBeDefined();
         expect(p.with).toBe(p.withal);
     });
 
-    it("treats NaN values as equal",() =>
+    it("treats NaN values as equal", () =>
     {
         obj.backingValue = NaN;
         expect(obj.cacheGet).toBeNaN();
@@ -220,7 +225,7 @@ describe("propjet",() =>
         expect(obj.callCount).toBe(1);
     });
 
-    it("treats undefined and null as different values",() =>
+    it("treats undefined and null as different values", () =>
     {
         obj.backingValue = null;
         expect(obj.cacheGet).toBeNull();
@@ -228,7 +233,7 @@ describe("propjet",() =>
         expect(obj.cacheGet).toBeUndefined();
     });
 
-    it("treats empty arrays as equal",() =>
+    it("treats empty arrays as equal", () =>
     {
         obj.array = [];
         expect(obj.arrayLength).toBe(0);
@@ -243,7 +248,7 @@ describe("propjet",() =>
         expect(obj.callCount).toBe(3);
     });
 
-    it("reinitializes property on requirement change",() =>
+    it("reinitializes property on requirement change", () =>
     {
         expect(obj.initializableValue).toBe(0);
         obj.initializableValue = 2;
@@ -252,12 +257,44 @@ describe("propjet",() =>
         expect(obj.initializableValue).toBe(0);
     });
 
-    it("does not initialize property after implicit setting",() =>
+    it("does not initialize property after implicit setting", () =>
     {
         obj.backingValue = 1;
         obj.initializableValue = 2;
         expect(obj.initializableValue).toBe(2);
         obj.backingValue = 2;
         expect(obj.initializableValue).toBe(0);
+    });
+
+    it("supports function mode", () =>
+    {
+        var test = propjet<number>().default(() => 0).declare(true);
+        expect(test()).toBe(0);
+        test(1);
+        expect(test()).toBe(1);
+        test = propjet<number>(obj, "test").default(() => 0).declare(true);
+        expect(test).toBe((<any>obj).test);
+        (<any>obj).test(1);
+        expect((<any>obj).test()).toBe(1);
+    });
+
+    it("supports properties without getter", () =>
+    {
+        var value: number;
+        obj.backingFunction = newValue => value = newValue;
+        expect(obj.setterOnly).toBe(0);
+        obj.setterOnly = 1;
+        expect(obj.setterOnly).toBe(1);
+        expect(value).toBe(1);
+    });
+
+    it("supports read in setter of property without getter", () =>
+    {
+        obj.backingFunction = value =>
+        {
+            expect(obj.setterOnly).toBe(1);
+            return undefined;
+        };
+        obj.setterOnly = 1;
     });
 });

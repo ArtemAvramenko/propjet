@@ -45,7 +45,7 @@ class DemoController
         declare();
 
     fullName = propjet<string>().
-        require(() => this.firstName,() => this.lastName).
+        require(() => this.firstName, () => this.lastName).
         get((firstName, lastName) => firstName + " " + lastName).
         declare();
 
@@ -55,7 +55,7 @@ class DemoController
         declare();
 
     allNames = propjet<string>().
-        require(() => this.firstName,() => this.lastName,() => this.fullName,() => this.fullNameCaps).
+        require(() => this.firstName, () => this.lastName, () => this.fullName, () => this.fullNameCaps).
         get((...names: string[]) => names.join(", ")).
         declare();
 

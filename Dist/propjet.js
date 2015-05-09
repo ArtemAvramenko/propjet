@@ -1,5 +1,5 @@
 /*
- propjet.js 0.8
+ propjet.js 0.9
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
@@ -142,12 +142,12 @@ this.propjet = (function () {
         function createProperty(propertyName, data, functionMode) {
             delete data.__prop__unready__;
             if (functionMode) {
-                var func = function (value) {
+                function func(value) {
                     if (arguments.length === 0) {
                         return getter();
                     }
                     setter(value);
-                };
+                }
                 if (propertyName) {
                     object[propertyName] = func;
                 }
@@ -170,7 +170,10 @@ this.propjet = (function () {
                     return 2;
                 }
                 if (value.length === 0 && getVersion(value) == null) {
-                    for (var i in value) {
+                    /* tslint:disable */
+                    for (var i in value) 
+                    /* tslint:enable */
+                    {
                         return 0;
                     }
                     return 3;
@@ -205,22 +208,20 @@ this.propjet = (function () {
                 return same;
             }
             function saveArgs(args) {
-                var sourceValues;
-                if (data.src) {
-                    sourceValues = [];
-                    forEach(args, function (arg, i) {
-                        sourceValues[i] = {
-                            val: arg,
-                            ver: arg != null ? getVersion(arg) : undefined,
-                            len: arg != null ? arg.length : undefined
-                        };
-                    });
-                }
+                var sourceValues = [];
+                forEach(args, function (arg, i) {
+                    sourceValues[i] = {
+                        val: arg,
+                        ver: arg != null ? getVersion(arg) : undefined,
+                        len: arg != null ? arg.length : undefined
+                    };
+                });
                 data.vals = sourceValues;
             }
             function getter() {
-                if (data.lvl) {
-                    if (data.lvl === nestingLevel) {
+                var oldLevel = data.lvl;
+                if (oldLevel > 0) {
+                    if (oldLevel === nestingLevel) {
                         return data.res;
                     }
                     throw new Error("Circular dependency detected");
@@ -256,14 +257,16 @@ this.propjet = (function () {
                             newResult = data.fltr.call(object, newResult, data.res);
                         }
                         // store last arguments and result
-                        saveArgs(args);
+                        if (data.src) {
+                            saveArgs(args);
+                        }
                         data.res = newResult;
                     }
                     return data.res;
                 }
                 finally {
                     nestingLevel--;
-                    delete data.lvl;
+                    data.lvl = oldLevel;
                 }
             }
             function setter(value) {
@@ -283,14 +286,12 @@ this.propjet = (function () {
                     if (data.fltr) {
                         value = data.fltr.call(object, value, data.res);
                     }
-                    // call setter
-                    if (data.set) {
-                        data.set.call(object, value);
+                    if (data.get) {
+                        if (!data.set) {
+                            throw new Error("Attempt to write readonly property");
+                        }
                     }
-                    else if (data.get) {
-                        throw new Error("Attempt to write readonly property");
-                    }
-                    if (!data.get) {
+                    else {
                         // property without getter
                         if (data.src) {
                             var args = [];
@@ -302,10 +303,14 @@ this.propjet = (function () {
                         }
                         data.res = value;
                     }
+                    // call setter
+                    if (data.set) {
+                        data.set.call(object, value);
+                    }
                 }
                 finally {
                     nestingLevel--;
-                    delete data.lvl;
+                    data.lvl = 0;
                 }
             }
         }

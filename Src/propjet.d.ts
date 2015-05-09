@@ -99,7 +99,7 @@ declare module Propjet
         /**
          * Specifies default value.
          */
-        default(initialValue: () => T): IDeclareOrWith<T>;
+        default(initialValue: () => T): IDeclareOrSetOrWith<T>;
     }
 
     export interface IDeclare<T>
@@ -152,10 +152,6 @@ declare module Propjet
 
     export interface IDeclareOrSet<T>
         extends IDeclare<T>, ISet<T>
-    { }
-
-    export interface IDeclareOrWith<T>
-        extends IDeclare<T>, IWith<T>
     { }
 
     export interface IDeclareOrSetOrWith<T>
