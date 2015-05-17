@@ -1,7 +1,5 @@
-class TestClass
-{
-    constructor()
-    {
+class TestClass {
+    constructor() {
         propjet(this);
     }
 
@@ -24,8 +22,7 @@ class TestClass
     cacheGet = propjet<number>().
         require(() => this.backingValue).
         get(
-        () =>
-        {
+        () => {
             this.callCount++;
             return this.backingValue;
         }).
@@ -34,12 +31,10 @@ class TestClass
     fibonacciNumbers = propjet<number[]>().
         require().
         get(
-        () =>
-        {
+        () => {
             this.callCount++;
             var a = [0, 1];
-            for (var i = 0; i < 100; i++)
-            {
+            for (var i = 0; i < 100; i++) {
                 a.push(a[i] + a[i + 1]);
             }
             return a;
@@ -49,8 +44,7 @@ class TestClass
     objectValue = propjet<number>().
         require(() => this.backingObject).
         get(
-        nested =>
-        {
+        nested => {
             this.callCount++;
             return nested ? nested.backingValue : NaN;
         }).
@@ -59,8 +53,7 @@ class TestClass
     functionValue = propjet<number>().
         require(() => this.backingFunction).
         get(
-        func =>
-        {
+        func => {
             this.callCount++;
             return func();
         }).
@@ -83,8 +76,7 @@ class TestClass
     arrayLength = propjet<number>().
         require(() => this.array).
         get(
-        a =>
-        {
+        a => {
             this.callCount++;
             return a.length;
         }).
@@ -118,59 +110,48 @@ class TestPromise<T>
 
     private _catchCallbacks: ((rejection: any) => void)[] = [];
 
-    then(callback: (value: T) => void)
-    {
+    then(callback: (value: T) => void) {
         this._thenCallbacks.push(callback);
     }
 
-    catch(callback: (rejection: any) => void)
-    {
+    catch(callback: (rejection: any) => void) {
         this._catchCallbacks.push(callback);
     }
 
-    callThen(value: T)
-    {
-        while (this._thenCallbacks.length)
-        {
+    callThen(value: T) {
+        while (this._thenCallbacks.length) {
             this._thenCallbacks.shift()(value);
         }
     }
 
-    callCatch(rejection: any)
-    {
-        while (this._catchCallbacks.length)
-        {
+    callCatch(rejection: any) {
+        while (this._catchCallbacks.length) {
             this._catchCallbacks.shift()(rejection);
         }
     }
 }
 
-describe("Regular propjet property", () =>
-{
+describe("Regular propjet property", () => {
     var obj: TestClass;
 
-    beforeEach(() =>
-    {
+    beforeEach(() => {
         obj = new TestClass();
     });
 
-    it("supports simple getters", () =>
-    {
+    it("supports simple getters", () => {
         obj.backingValue = 1;
         expect(obj.simpleGet).toBe(1);
         obj.backingValue = 2;
         expect(obj.simpleGet).toBe(2);
     });
 
-    it("supports lazy loading via empty requirements ", () =>
-    {
+    it("supports lazy loading via empty requirements ", () => {
         expect(obj.callCount).toBe(0);
         expect(obj.fibonacciNumbers).toBe(obj.fibonacciNumbers);
         expect(obj.callCount).toBe(1);
     });
 
-    it("expects explicit invalidation on complex requirement change", () =>
-    {
+    it("expects explicit invalidation on complex requirement change", () => {
         obj.backingObject = new TestClass();
         obj.backingObject.backingValue = 1;
         expect(obj.objectValue).toBe(1);
@@ -183,8 +164,7 @@ describe("Regular propjet property", () =>
         expect(obj.objectValue).toBe(3);
     });
 
-    it("expects explicit invalidation on function requirement change", () =>
-    {
+    it("expects explicit invalidation on function requirement change", () => {
         var i = 1;
         obj.backingFunction = () => i;
         expect(obj.functionValue).toBe(1);
@@ -194,27 +174,23 @@ describe("Regular propjet property", () =>
         expect(obj.functionValue).toBe(2);
     });
 
-    it("does not need invalidation on requirement length change", () =>
-    {
+    it("does not need invalidation on requirement length change", () => {
         expect(obj.arrayLength).toBe(0);
         obj.array.push(0);
         expect(obj.arrayLength).toBe(1);
     });
 
-    it("allows getting last read value in getter", () =>
-    {
+    it("allows getting last read value in getter", () => {
         expect(obj.readonlyArray).toBe(obj.readonlyArray);
     });
 
-    it("allows change default value", () =>
-    {
+    it("allows change default value", () => {
         expect(obj.defaultOption).toBe("on");
         obj.defaultOption = null;
         expect(obj.defaultOption).toBeNull();
     });
 
-    it("filters written values", () =>
-    {
+    it("filters written values", () => {
         expect(obj.filterValue).toBeUndefined();
         obj.filterValue = 1;
         expect(obj.filterValue).toBe(1);
@@ -224,8 +200,7 @@ describe("Regular propjet property", () =>
         expect(obj.filterValue).toBe(2);
     });
 
-    it("allows overriding", () =>
-    {
+    it("allows overriding", () => {
         var a = [];
         expect(obj.readonlyArray).toBeDefined();
         obj.readonlyArray = propjet<number[]>().default(() => []).declare();
@@ -233,41 +208,35 @@ describe("Regular propjet property", () =>
         expect(obj.readonlyArray).toBe(a);
     });
 
-    it("throws error on writing readonly property", () =>
-    {
+    it("throws error on writing readonly property", () => {
         expect(() => obj.readonlyArray = []).toThrowError("Attempt to write readonly property");
     });
 
-    it("throws error on circular dependency", () =>
-    {
+    it("throws error on circular dependency", () => {
         var v;
         propjet<number>(obj, "x").get(() => obj.functionValue).declare();
         obj.backingFunction = () => (<any>obj).x;
         expect(() => v = obj.functionValue).toThrowError("Circular dependency detected");
     });
 
-    it("throws error on recursive write", () =>
-    {
+    it("throws error on recursive write", () => {
         obj.backingFunction = (x: number) => obj.functionValue = x;
         expect(() => obj.functionValue = 1).toThrowError("Recursive property write");
     });
 
-    it("has alias for 'with' method", () =>
-    {
+    it("has alias for 'with' method", () => {
         var p = propjet<any>();
         expect(p.with).toBeDefined();
         expect(p.with).toBe(p.withal);
     });
 
-    it("has alias for 'default' method", () =>
-    {
+    it("has alias for 'default' method", () => {
         var p = propjet<any>();
         expect(p.default).toBeDefined();
         expect(p.defaults).toBe(p.default);
     });
 
-    it("treats NaN values as equal", () =>
-    {
+    it("treats NaN values as equal", () => {
         obj.backingValue = NaN;
         expect(obj.cacheGet).toBeNaN();
         expect(obj.callCount).toBe(1);
@@ -276,16 +245,14 @@ describe("Regular propjet property", () =>
         expect(obj.callCount).toBe(1);
     });
 
-    it("treats undefined and null as different values", () =>
-    {
+    it("treats undefined and null as different values", () => {
         obj.backingValue = null;
         expect(obj.cacheGet).toBeNull();
         obj.backingValue = undefined;
         expect(obj.cacheGet).toBeUndefined();
     });
 
-    it("treats empty arrays as equal", () =>
-    {
+    it("treats empty arrays as equal", () => {
         obj.array = [];
         expect(obj.arrayLength).toBe(0);
         obj.array = [];
@@ -299,8 +266,7 @@ describe("Regular propjet property", () =>
         expect(obj.callCount).toBe(3);
     });
 
-    it("reinitializes on requirement change", () =>
-    {
+    it("reinitializes on requirement change", () => {
         expect(obj.initializableValue).toBe(0);
         obj.initializableValue = 2;
         expect(obj.initializableValue).toBe(2);
@@ -308,8 +274,7 @@ describe("Regular propjet property", () =>
         expect(obj.initializableValue).toBe(0);
     });
 
-    it("does not initialize after implicit setting", () =>
-    {
+    it("does not initialize after implicit setting", () => {
         obj.backingValue = 1;
         obj.initializableValue = 2;
         expect(obj.initializableValue).toBe(2);
@@ -317,8 +282,7 @@ describe("Regular propjet property", () =>
         expect(obj.initializableValue).toBe(0);
     });
 
-    it("supports function mode", () =>
-    {
+    it("supports function mode", () => {
         var test = propjet<number>().default(() => 0).declare(true);
         expect(test()).toBe(0);
         test(1);
@@ -329,8 +293,7 @@ describe("Regular propjet property", () =>
         expect((<any>obj).test()).toBe(1);
     });
 
-    it("supports properties without getter", () =>
-    {
+    it("supports properties without getter", () => {
         var value: number;
         obj.backingFunction = newValue => value = newValue;
         expect(obj.setterOnly).toBe(0);
@@ -339,10 +302,8 @@ describe("Regular propjet property", () =>
         expect(value).toBe(1);
     });
 
-    it("supports read in setter when getter is not defined", () =>
-    {
-        obj.backingFunction = value =>
-        {
+    it("supports read in setter when getter is not defined", () => {
+        obj.backingFunction = value => {
             expect(obj.setterOnly).toBe(1);
             return undefined;
         };
@@ -350,23 +311,19 @@ describe("Regular propjet property", () =>
     });
 });
 
-describe("Deferred propjet property", () =>
-{
+describe("Deferred propjet property", () => {
     var obj: TestClass;
 
-    beforeEach(() =>
-    {
+    beforeEach(() => {
         obj = new TestClass();
     });
 
-    it("returns undefined by default", () =>
-    {
+    it("returns undefined by default", () => {
         obj.getPromise = () => new TestPromise<number>();
         expect(obj.deferred.last).toBeUndefined();
     });
 
-    it("stores last value from getter promise", () =>
-    {
+    it("stores last value from getter promise", () => {
         var getPromise: TestPromise<number>;
         obj.getPromise = () => getPromise = new TestPromise<number>();
         expect(obj.deferred.last).toBeUndefined();

@@ -1,7 +1,5 @@
-class DemoController
-{
-    constructor()
-    {
+class DemoController {
+    constructor() {
         propjet(this);
         this.resetName();
     }
@@ -20,8 +18,7 @@ class DemoController
 
     now = propjet<Date>().
         require(
-        (oldDate: Date) =>
-        {
+        (oldDate: Date) => {
             var date = new Date();
             date.setSeconds(0, 0);
             return oldDate && oldDate.getTime() === date.getTime() ? oldDate : date;
@@ -59,22 +56,18 @@ class DemoController
         get((...names: string[]) => names.join(", ")).
         declare();
 
-    resetName()
-    {
+    resetName() {
         this.firstName = "john";
         this.lastName = "doe";
         this._items = null;
     }
 
-    inc()
-    {
-        if (this._items.length)
-        {
+    inc() {
+        if (this._items.length) {
             this._items[0]++;
             propjet.invalidate(this._items);
         }
-        else
-        {
+        else {
             this._items.push(1);
         }
     }

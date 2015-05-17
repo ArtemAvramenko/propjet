@@ -1,5 +1,5 @@
 ﻿module.exports = function (grunt) {
-  
+
     grunt.loadNpmTasks('grunt-ts');
     grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.loadNpmTasks('grunt-contrib-concat');
@@ -22,14 +22,6 @@
                 files: {
                     'Src/propjet.min.js': ['Src/propjet.js']
                 }
-                // options: {
-                    // compress: {
-                        // evaluate: true,
-                        // join_vars: true,
-                        // if_return: true,
-                        // cascade: true
-                    // }
-                // }
             }
         },
         concat: {
