@@ -1,0 +1,33 @@
+{
+    "name": "propjet",
+    "version": "1.0.0",
+    "description": "Reactive property library for JavaScript and TypeScript",
+    "main": "Src/propjet.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ArtemAvramenko/propjet.js.git"
+    },
+    "keywords": [
+        "javascript",
+        "typescript",
+        "reactive",
+        "promise"
+    ],
+    "author": "Artem Avramenko",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/ArtemAvramenko/propjet.js/issues"
+    },
+    "homepage": "https://github.com/ArtemAvramenko/propjet.js",
+    "devDependencies": {
+        "grunt": "^0.4.5",
+        "grunt-contrib-concat": "^0.5.1",
+        "grunt-contrib-uglify": "^0.9.1",
+        "grunt-ts": "^4.1.0",
+        "grunt-zip": "^0.16.2",
+        "typescript": "^1.4.1"
+    }
+}

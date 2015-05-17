@@ -1,9 +1,11 @@
 bin
 obj
 packages
-/*.js
+/demo.js
 /*.js.map
 Src/*.js
 Src/*.js.map
 *.suo
 *.csproj.user
+node_modules
+.tscache

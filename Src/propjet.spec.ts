@@ -13,6 +13,10 @@ class TestClass
 
     backingObject: TestClass;
 
+    getPromise: (arg: number) => TestPromise<number>;
+
+    setPromise: (newValue: number, arg: number) => TestPromise<number>;
+
     simpleGet = propjet<number>().
         get(() => this.backingValue).
         declare();
@@ -99,9 +103,49 @@ class TestClass
         require(() => this.backingValue).
         default(() => 0).
         declare();
+
+    deferred = propjet<number>().
+        from<TestPromise<number>>().
+        require(() => this.backingValue).
+        get(arg => this.getPromise(arg)).
+        set((newValue, arg) => this.setPromise(newValue, arg)).
+        declare();
 }
 
-describe("propjet", () =>
+class TestPromise<T>
+{
+    private _thenCallbacks: ((value: T) => void)[] = [];
+
+    private _catchCallbacks: ((rejection: any) => void)[] = [];
+
+    then(callback: (value: T) => void)
+    {
+        this._thenCallbacks.push(callback);
+    }
+
+    catch(callback: (rejection: any) => void)
+    {
+        this._catchCallbacks.push(callback);
+    }
+
+    callThen(value: T)
+    {
+        while (this._thenCallbacks.length)
+        {
+            this._thenCallbacks.shift()(value);
+        }
+    }
+
+    callCatch(rejection: any)
+    {
+        while (this._catchCallbacks.length)
+        {
+            this._catchCallbacks.shift()(rejection);
+        }
+    }
+}
+
+describe("Regular propjet property", () =>
 {
     var obj: TestClass;
 
@@ -180,7 +224,7 @@ describe("propjet", () =>
         expect(obj.filterValue).toBe(2);
     });
 
-    it("allows property overriding", () =>
+    it("allows overriding", () =>
     {
         var a = [];
         expect(obj.readonlyArray).toBeDefined();
@@ -202,7 +246,7 @@ describe("propjet", () =>
         expect(() => v = obj.functionValue).toThrowError("Circular dependency detected");
     });
 
-    it("throws error on recursive property write", () =>
+    it("throws error on recursive write", () =>
     {
         obj.backingFunction = (x: number) => obj.functionValue = x;
         expect(() => obj.functionValue = 1).toThrowError("Recursive property write");
@@ -213,6 +257,13 @@ describe("propjet", () =>
         var p = propjet<any>();
         expect(p.with).toBeDefined();
         expect(p.with).toBe(p.withal);
+    });
+
+    it("has alias for 'default' method", () =>
+    {
+        var p = propjet<any>();
+        expect(p.default).toBeDefined();
+        expect(p.defaults).toBe(p.default);
     });
 
     it("treats NaN values as equal", () =>
@@ -248,7 +299,7 @@ describe("propjet", () =>
         expect(obj.callCount).toBe(3);
     });
 
-    it("reinitializes property on requirement change", () =>
+    it("reinitializes on requirement change", () =>
     {
         expect(obj.initializableValue).toBe(0);
         obj.initializableValue = 2;
@@ -257,7 +308,7 @@ describe("propjet", () =>
         expect(obj.initializableValue).toBe(0);
     });
 
-    it("does not initialize property after implicit setting", () =>
+    it("does not initialize after implicit setting", () =>
     {
         obj.backingValue = 1;
         obj.initializableValue = 2;
@@ -288,7 +339,7 @@ describe("propjet", () =>
         expect(value).toBe(1);
     });
 
-    it("supports read in setter of property without getter", () =>
+    it("supports read in setter when getter is not defined", () =>
     {
         obj.backingFunction = value =>
         {
@@ -296,5 +347,31 @@ describe("propjet", () =>
             return undefined;
         };
         obj.setterOnly = 1;
+    });
+});
+
+describe("Deferred propjet property", () =>
+{
+    var obj: TestClass;
+
+    beforeEach(() =>
+    {
+        obj = new TestClass();
+    });
+
+    it("returns undefined by default", () =>
+    {
+        obj.getPromise = () => new TestPromise<number>();
+        expect(obj.deferred.last).toBeUndefined();
+    });
+
+    it("stores last value from getter promise", () =>
+    {
+        var getPromise: TestPromise<number>;
+        obj.getPromise = () => getPromise = new TestPromise<number>();
+        expect(obj.deferred.last).toBeUndefined();
+        obj.deferred.get().then(value => expect(value).toBe(1));
+        getPromise.callThen(1);
+        expect(obj.deferred.last).toBe(1);
     });
 });
