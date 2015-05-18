@@ -99,6 +99,7 @@ class TestClass {
     deferred = propjet<number>().
         from<TestPromise<number>>().
         require(() => this.backingValue).
+        default(() => null).
         get(arg => this.getPromise(arg)).
         set((newValue, arg) => this.setPromise(newValue, arg)).
         declare();
@@ -318,17 +319,23 @@ describe("Deferred propjet property", () => {
         obj = new TestClass();
     });
 
-    it("returns undefined by default", () => {
-        obj.getPromise = () => new TestPromise<number>();
-        expect(obj.deferred.last).toBeUndefined();
-    });
-
     it("stores last value from getter promise", () => {
         var getPromise: TestPromise<number>;
         obj.getPromise = () => getPromise = new TestPromise<number>();
-        expect(obj.deferred.last).toBeUndefined();
+        expect(obj.deferred.last).toBeNull();
         obj.deferred.get().then(value => expect(value).toBe(1));
         getPromise.callThen(1);
         expect(obj.deferred.last).toBe(1);
+    });
+
+    it("resets last value to default on requirement change", () => {
+        obj.backingValue = 1;
+        var promise = new TestPromise<number>();
+        obj.getPromise = () => promise;
+        expect(obj.deferred.last).toBeNull();
+        promise.callThen(1);
+        expect(obj.deferred.last).toBe(1);
+        obj.backingValue = 2;
+        expect(obj.deferred.last).toBeNull();
     });
 });

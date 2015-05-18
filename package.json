@@ -1,6 +1,6 @@
 {
     "name": "propjet",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Reactive property library for JavaScript and TypeScript",
     "main": "Src/propjet.js",
     "scripts": {

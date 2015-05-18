@@ -1,5 +1,5 @@
 /*!
- propjet.js v1.0.0
+ propjet.js v1.1.0
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
@@ -394,6 +394,7 @@ this.propjet = (function () {
                     incrementVersion(deferred);
                     var args = [];
                     getArgs(data, args);
+                    saveArgs(data, args);
                     args.unshift(newValue);
                     var promise = data.set.apply(object, args);
                     if (!isDeferred) {
@@ -442,7 +443,13 @@ this.propjet = (function () {
                 }
                 var args = [];
                 var same = getArgs(data, args);
-                if (!same || forceUpdate) {
+                if (!same) {
+                    forceUpdate = true;
+                    if (data.init) {
+                        deferred.last = data.init();
+                    }
+                }
+                if (forceUpdate) {
                     incrementVersion(deferred);
                     saveArgs(data, args);
                     promise = data.get.apply(object, args);

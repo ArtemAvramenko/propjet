@@ -196,25 +196,25 @@ declare module Propjet {
         /**
          * Specifies that no data source is required. It is useful for lazy initialization.
          */
-        require(): IDeferredGet<T, TPromise>;
+        require(): IDeferredGetOrDefault<T, TPromise>;
         /**
          * Specifies one data source.
          */
         require<TIn1>(
-            a: (oldIn?: TIn1) => TIn1): IDeferredGet1<T, TPromise, TIn1>;
+            a: (oldIn?: TIn1) => TIn1): IDeferredGetOrDefault1<T, TPromise, TIn1>;
         /**
          * Specifies two data sources.
          */
         require<TIn1, TIn2>(
             a: (oldIn?: TIn1) => TIn1,
-            b: (oldIn?: TIn2) => TIn2): IDeferredGet2<T, TPromise, TIn1, TIn2>;
+            b: (oldIn?: TIn2) => TIn2): IDeferredGetOrDefault2<T, TPromise, TIn1, TIn2>;
         /**
          * Specifies three data sources.
          */
         require<TIn1, TIn2, TIn3>(
             a: (oldIn?: TIn1) => TIn1,
             b: (oldIn?: TIn2) => TIn2,
-            c: (oldIn?: TIn3) => TIn3): IDeferredGet3<T, TPromise, TIn1, TIn2, TIn3>;
+            c: (oldIn?: TIn3) => TIn3): IDeferredGetOrDefault3<T, TPromise, TIn1, TIn2, TIn3>;
         /**
          * Specifies four or more data sources.
          */
@@ -222,7 +222,47 @@ declare module Propjet {
             a: (oldIn?: TIn1) => TIn1,
             b: (oldIn?: TIn2) => TIn2,
             c: (oldIn?: TIn3) => TIn3,
-            ...d: ((oldIn?: TIn4) => TIn4)[]): IDeferredGet4<T, TPromise, TIn1, TIn2, TIn3, TIn4>;
+            ...d: ((oldIn?: TIn4) => TIn4)[]): IDeferredGetOrDefault4<T, TPromise, TIn1, TIn2, TIn3, TIn4>;
+    }
+
+    export interface IDeferredGetOrDefault<T, TPromise>
+        extends IDeferredGet<T, TPromise> {
+        /**
+         * Specifies default value.
+         */
+        default(initialValue: () => T): IDeferredGet<T, TPromise>;
+    }
+
+    export interface IDeferredGetOrDefault1<T, TPromise, TIn1>
+        extends IDeferredGet1<T, TPromise, TIn1> {
+        /**
+         * Specifies default value.
+         */
+        default(initialValue: () => T): IDeferredGet1<T, TPromise, TIn1>;
+    }
+
+    export interface IDeferredGetOrDefault2<T, TPromise, TIn1, TIn2>
+        extends IDeferredGet2<T, TPromise, TIn1, TIn2> {
+        /**
+         * Specifies default value.
+         */
+        default(initialValue: () => T): IDeferredGet2<T, TPromise, TIn1, TIn2>;
+    }
+
+    export interface IDeferredGetOrDefault3<T, TPromise, TIn1, TIn2, TIn3>
+        extends IDeferredGet3<T, TPromise, TIn1, TIn2, TIn3> {
+        /**
+         * Specifies default value.
+         */
+        default(initialValue: () => T): IDeferredGet3<T, TPromise, TIn1, TIn2, TIn3>;
+    }
+
+    export interface IDeferredGetOrDefault4<T, TPromise, TIn1, TIn2, TIn3, TIn4>
+        extends IDeferredGet4<T, TPromise, TIn1, TIn2, TIn3, TIn4> {
+        /**
+         * Specifies default value.
+         */
+        default(initialValue: () => T): IDeferredGet4<T, TPromise, TIn1, TIn2, TIn3, TIn4>;
     }
 
     export interface IDeferredGet<T, TPromise> {
@@ -313,8 +353,8 @@ declare module Propjet {
     }
 
     export interface IPromise<T> {
-        then<TResult>(callback: (value: T) => any): any;
-        catch<TResult>(callback: (reason: any) => any): any;
+        then(callback: (value: T) => any): any;
+        catch(callback: (reason: any) => any): any;
     }
 }
 

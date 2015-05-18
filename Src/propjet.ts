@@ -89,7 +89,7 @@ declare module Propjet {
         var testIE = {};
         testIE[propertyIsEnumerable] = 0;
         for (var notIE in testIE) {
-            // IE 6..8 do not set notIE variable in this case
+            // old IE (6,7,8) does not set notIE variable in this case
         }
 
         if (!notIE) {
@@ -480,6 +480,7 @@ declare module Propjet {
                     incrementVersion(<any>deferred);
                     var args = [];
                     getArgs(data, args);
+                    saveArgs(data, args);
                     args.unshift(newValue);
 
                     var promise: Propjet.IPromise<T> = data.set.apply(object, args);
@@ -536,7 +537,13 @@ declare module Propjet {
                 }
                 var args: Propjet.IVersionObject[] = [];
                 var same = getArgs(data, args);
-                if (!same || forceUpdate) {
+                if (!same) {
+                    forceUpdate = true;
+                    if (data.init) {
+                        deferred.last = data.init();
+                    }
+                }
+                if (forceUpdate) {
                     incrementVersion(<any>deferred);
                     saveArgs(data, args);
                     promise = data.get.apply(object, args);
