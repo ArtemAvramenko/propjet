@@ -25,13 +25,17 @@ declare module Propjet {
         vals: ISourceValue[];
         res: T;
         init: () => T;
-        get: () => T;
-        set: (newValue: T) => void;
+        get: () => T | IPromise<T>;
+        set: (newValue: T) => void | IPromise<T>;
         fltr: (newValue: T, oldValue?: T) => T;
     }
 
     export interface IForEachCallback<T> {
         (value: T, index: number): void;
+    }
+
+    export interface IFunctionCaller {
+        (thisArg: any, func: (arg?: any) => any, args: any[]): any;
     }
 
     const enum DeferredStatus { pending, fulfilled, rejected }
@@ -274,7 +278,7 @@ declare module Propjet {
             return 0;
         }
 
-        function getArgs(data: Propjet.IPropData<T>, args: Propjet.IVersionObject[]): boolean {
+        function getArgs(data: Propjet.IPropData<T>, args: Propjet.IVersionObject[], caller?: Propjet.IFunctionCaller): boolean {
             if (!data.src) {
                 return false;
             }
@@ -285,7 +289,13 @@ declare module Propjet {
 
             forEach(data.src, (source, i) => {
                 var old = ignoreOldValues ? undef : data.vals[i];
-                var arg = <Propjet.IVersionObject>source.call(object, old != null ? old.val : undef);
+                var arg: Propjet.IVersionObject;
+                if (caller) {
+                    arg = caller(object, source, [old != null ? old.val : undef]);
+                }
+                else {
+                    arg = source.call(object, old != null ? old.val : undef);
+                }
                 args[i] = arg;
                 if (same) {
                     var oldEmpty = emptyValue(old.val);
@@ -450,107 +460,34 @@ declare module Propjet {
         function createDeferredProperty(propertyName: string, data: Propjet.IPropData<T>, functionMode?: boolean): any {
             var promise: Propjet.IPromise<T>;
             var deferred = <Propjet.IDeferred<T, Propjet.IPromise<T>>>{};
-            var isInPromiseMethod: boolean;
+            var isInCallback: boolean;
 
             deferred.get = (forceUpdate?: boolean) => {
-                if (isInPromiseMethod) {
-                    throwError(Propjet.Error.circularPromises);
+                if (forceUpdate && !deferred.pending) {
+                    checkUpdate(forceUpdate);
                 }
-                isInPromiseMethod = true;
-                try {
-                    if (forceUpdate && !deferred.pending) {
-                        checkUpdate(forceUpdate);
-                    }
-                    return promise;
-                }
-                finally {
-                    isInPromiseMethod = false;
-                }
+                return promise;
             };
 
             deferred.set = (newValue: T, isDeferred?: boolean) => {
-                if (isInPromiseMethod) {
-                    throwError(Propjet.Error.circularPromises);
+                if (!data.set) {
+                    throwReadonlyError();
                 }
-                isInPromiseMethod = true;
-                try {
-                    if (!data.set) {
-                        throwReadonlyError();
-                    }
-                    incrementVersion(<any>deferred);
-                    var args = [];
-                    getArgs(data, args);
-                    saveArgs(data, args);
-                    args.unshift(newValue);
+                incrementVersion(<any>readonlyProxy || deferred);
+                var args = [];
+                getArgs(data, args, wrapCall);
+                saveArgs(data, args);
+                args.unshift(newValue);
 
-                    var promise: Propjet.IPromise<T> = data.set.apply(object, args);
-                    if (!isDeferred) {
-                        deferred.last = newValue;
-                    }
-                    waitPromise(promise);
-                    return promise;
+                var promise = <Propjet.IPromise<T>>wrapCall(object, data.set, args);
+                if (!isDeferred) {
+                    deferred.last = newValue;
                 }
-                finally {
-                    isInPromiseMethod = false;
-                }
+                waitPromise(promise);
+                return promise;
             };
 
-            function setStatus(newStatus: Propjet.DeferredStatus) {
-                deferred.pending = newStatus === Propjet.DeferredStatus.pending;
-                deferred.fulfilled = newStatus === Propjet.DeferredStatus.fulfilled;
-                deferred.rejected = newStatus === Propjet.DeferredStatus.rejected;
-                deferred.settled = newStatus !== Propjet.DeferredStatus.pending;
-            }
-
-            function setValue(value: any, isRejection?: boolean) {
-                incrementVersion(<any>deferred);
-                if (!isRejection) {
-                    deferred.last = value;
-                }
-                deferred.rejectReason = isRejection ? value : undef;
-                setStatus(isRejection ? Propjet.DeferredStatus.fulfilled : Propjet.DeferredStatus.rejected);
-            }
-
-            function waitPromise(promise: Propjet.IPromise<T>) {
-                var version = incrementVersion(<any>data);
-
-                if (!promise) {
-                    setValue(undefined);
-                    return;
-                }
-
-                forEach(["then", "catch"], (methodName, isRejection) => {
-                    promise[methodName](value => {
-                        // ignore callbacks if newer promise is active
-                        if (getVersion(<any>data) === version) {
-                            setValue(value, <any>isRejection);
-                        }
-                    });
-                });
-            }
-
             setValue(undef);
-
-            function checkUpdate(forceUpdate?: boolean) {
-                if (isInPromiseMethod) {
-                    return;
-                }
-                var args: Propjet.IVersionObject[] = [];
-                var same = getArgs(data, args);
-                if (!same) {
-                    forceUpdate = true;
-                    if (data.init) {
-                        deferred.last = data.init();
-                    }
-                }
-                if (forceUpdate) {
-                    incrementVersion(<any>deferred);
-                    saveArgs(data, args);
-                    promise = data.get.apply(object, args);
-                    setStatus(Propjet.DeferredStatus.pending);
-                    waitPromise(promise);
-                }
-            }
 
             if (functionMode) {
                 var func = () => {
@@ -587,6 +524,79 @@ declare module Propjet {
                         throwReadonlyError();
                     }
                 });
+
+            function wrapCall(thisArg: any, func: (arg?: any) => any, args?: any[]): any {
+                if (isInCallback) {
+                    throwError(Propjet.Error.circularPromises);
+                }
+                isInCallback = true;
+                try {
+                    return func.apply(thisArg, args || []);
+                }
+                finally {
+                    isInCallback = false;
+                }
+            }
+
+            function setStatus(newStatus: Propjet.DeferredStatus) {
+                deferred.pending = newStatus === Propjet.DeferredStatus.pending;
+                deferred.fulfilled = newStatus === Propjet.DeferredStatus.fulfilled;
+                deferred.rejected = newStatus === Propjet.DeferredStatus.rejected;
+                deferred.settled = newStatus !== Propjet.DeferredStatus.pending;
+            }
+
+            function setValue(value: any, isRejection?: boolean) {
+                incrementVersion(<any>readonlyProxy || deferred);
+                if (!isRejection) {
+                    deferred.last = value;
+                }
+                deferred.rejectReason = isRejection ? value : undef;
+                setStatus(isRejection ? Propjet.DeferredStatus.rejected : Propjet.DeferredStatus.fulfilled);
+            }
+
+            function waitPromise(promise: Propjet.IPromise<T>) {
+                var version = incrementVersion(<any>data);
+
+                if (!promise) {
+                    setValue(undefined);
+                    return;
+                }
+
+                promise.then(
+                    value => {
+                        // ignore callbacks if newer promise is active
+                        if (getVersion(<any>data) === version) {
+                            setValue(value);
+                        }
+                    },
+                    reason => {
+                        // ignore callbacks if newer promise is active
+                        if (getVersion(<any>data) === version) {
+                            setValue(reason, true);
+                        }
+                    });
+            }
+
+            function checkUpdate(forceUpdate?: boolean) {
+                if (isInCallback) {
+                    return;
+                }
+                var args: Propjet.IVersionObject[] = [];
+                var same = getArgs(data, args, wrapCall);
+                if (!same) {
+                    forceUpdate = true;
+                    if (data.init) {
+                        deferred.last = wrapCall(object, data.init);
+                    }
+                }
+                if (forceUpdate) {
+                    incrementVersion(<any>readonlyProxy || deferred);
+                    saveArgs(data, args);
+                    promise = wrapCall(object, data.get, args);
+                    setStatus(Propjet.DeferredStatus.pending);
+                    waitPromise(promise);
+                }
+            }
         }
     });
 

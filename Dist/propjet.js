@@ -1,5 +1,5 @@
 /*!
- propjet.js v1.1.0
+ propjet.js v1.2.0
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
@@ -213,7 +213,7 @@ this.propjet = (function () {
             }
             return 0;
         }
-        function getArgs(data, args) {
+        function getArgs(data, args, caller) {
             if (!data.src) {
                 return false;
             }
@@ -222,7 +222,13 @@ this.propjet = (function () {
             var ignoreOldValues = !same;
             forEach(data.src, function (source, i) {
                 var old = ignoreOldValues ? undef : data.vals[i];
-                var arg = source.call(object, old != null ? old.val : undef);
+                var arg;
+                if (caller) {
+                    arg = caller(object, source, [old != null ? old.val : undef]);
+                }
+                else {
+                    arg = source.call(object, old != null ? old.val : undef);
+                }
                 args[i] = arg;
                 if (same) {
                     var oldEmpty = emptyValue(old.val);
@@ -366,97 +372,30 @@ this.propjet = (function () {
         function createDeferredProperty(propertyName, data, functionMode) {
             var promise;
             var deferred = {};
-            var isInPromiseMethod;
+            var isInCallback;
             deferred.get = function (forceUpdate) {
-                if (isInPromiseMethod) {
-                    throwError(4 /* circularPromises */);
+                if (forceUpdate && !deferred.pending) {
+                    checkUpdate(forceUpdate);
                 }
-                isInPromiseMethod = true;
-                try {
-                    if (forceUpdate && !deferred.pending) {
-                        checkUpdate(forceUpdate);
-                    }
-                    return promise;
-                }
-                finally {
-                    isInPromiseMethod = false;
-                }
+                return promise;
             };
             deferred.set = function (newValue, isDeferred) {
-                if (isInPromiseMethod) {
-                    throwError(4 /* circularPromises */);
+                if (!data.set) {
+                    throwReadonlyError();
                 }
-                isInPromiseMethod = true;
-                try {
-                    if (!data.set) {
-                        throwReadonlyError();
-                    }
-                    incrementVersion(deferred);
-                    var args = [];
-                    getArgs(data, args);
-                    saveArgs(data, args);
-                    args.unshift(newValue);
-                    var promise = data.set.apply(object, args);
-                    if (!isDeferred) {
-                        deferred.last = newValue;
-                    }
-                    waitPromise(promise);
-                    return promise;
-                }
-                finally {
-                    isInPromiseMethod = false;
-                }
-            };
-            function setStatus(newStatus) {
-                deferred.pending = newStatus === 0 /* pending */;
-                deferred.fulfilled = newStatus === 1 /* fulfilled */;
-                deferred.rejected = newStatus === 2 /* rejected */;
-                deferred.settled = newStatus !== 0 /* pending */;
-            }
-            function setValue(value, isRejection) {
-                incrementVersion(deferred);
-                if (!isRejection) {
-                    deferred.last = value;
-                }
-                deferred.rejectReason = isRejection ? value : undef;
-                setStatus(isRejection ? 1 /* fulfilled */ : 2 /* rejected */);
-            }
-            function waitPromise(promise) {
-                var version = incrementVersion(data);
-                if (!promise) {
-                    setValue(undefined);
-                    return;
-                }
-                forEach(["then", "catch"], function (methodName, isRejection) {
-                    promise[methodName](function (value) {
-                        // ignore callbacks if newer promise is active
-                        if (getVersion(data) === version) {
-                            setValue(value, isRejection);
-                        }
-                    });
-                });
-            }
-            setValue(undef);
-            function checkUpdate(forceUpdate) {
-                if (isInPromiseMethod) {
-                    return;
-                }
+                incrementVersion(readonlyProxy || deferred);
                 var args = [];
-                var same = getArgs(data, args);
-                if (!same) {
-                    forceUpdate = true;
-                    if (data.init) {
-                        deferred.last = data.init();
-                    }
+                getArgs(data, args, wrapCall);
+                saveArgs(data, args);
+                args.unshift(newValue);
+                var promise = wrapCall(object, data.set, args);
+                if (!isDeferred) {
+                    deferred.last = newValue;
                 }
-                if (forceUpdate) {
-                    incrementVersion(deferred);
-                    saveArgs(data, args);
-                    promise = data.get.apply(object, args);
-                    setStatus(0 /* pending */);
-                    waitPromise(promise);
-                }
-            }
+                waitPromise(promise);
+                return promise;
+            };
+            setValue(undef);
             if (functionMode) {
                 var func = function () {
                     checkUpdate();
@@ -488,6 +427,70 @@ this.propjet = (function () {
                     throwReadonlyError();
                 }
             });
+            function wrapCall(thisArg, func, args) {
+                if (isInCallback) {
+                    throwError(4 /* circularPromises */);
+                }
+                isInCallback = true;
+                try {
+                    return func.apply(thisArg, args || []);
+                }
+                finally {
+                    isInCallback = false;
+                }
+            }
+            function setStatus(newStatus) {
+                deferred.pending = newStatus === 0 /* pending */;
+                deferred.fulfilled = newStatus === 1 /* fulfilled */;
+                deferred.rejected = newStatus === 2 /* rejected */;
+                deferred.settled = newStatus !== 0 /* pending */;
+            }
+            function setValue(value, isRejection) {
+                incrementVersion(readonlyProxy || deferred);
+                if (!isRejection) {
+                    deferred.last = value;
+                }
+                deferred.rejectReason = isRejection ? value : undef;
+                setStatus(isRejection ? 2 /* rejected */ : 1 /* fulfilled */);
+            }
+            function waitPromise(promise) {
+                var version = incrementVersion(data);
+                if (!promise) {
+                    setValue(undefined);
+                    return;
+                }
+                promise.then(function (value) {
+                    // ignore callbacks if newer promise is active
+                    if (getVersion(data) === version) {
+                        setValue(value);
+                    }
+                }, function (reason) {
+                    // ignore callbacks if newer promise is active
+                    if (getVersion(data) === version) {
+                        setValue(reason, true);
+                    }
+                });
+            }
+            function checkUpdate(forceUpdate) {
+                if (isInCallback) {
+                    return;
+                }
+                var args = [];
+                var same = getArgs(data, args, wrapCall);
+                if (!same) {
+                    forceUpdate = true;
+                    if (data.init) {
+                        deferred.last = wrapCall(object, data.init);
+                    }
+                }
+                if (forceUpdate) {
+                    incrementVersion(readonlyProxy || deferred);
+                    saveArgs(data, args);
+                    promise = wrapCall(object, data.get, args);
+                    setStatus(0 /* pending */);
+                    waitPromise(promise);
+                }
+            }
         }
     });
     propjet.invalidate = incrementVersion;

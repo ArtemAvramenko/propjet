@@ -103,31 +103,35 @@ class TestClass {
         get(arg => this.getPromise(arg)).
         set((newValue, arg) => this.setPromise(newValue, arg)).
         declare();
+
+    deferredLast = propjet<number>().
+        require(() => this.deferred).
+        get(def => def.last).
+        declare()
 }
 
 class TestPromise<T>
 {
     private _thenCallbacks: ((value: T) => void)[] = [];
 
-    private _catchCallbacks: ((rejection: any) => void)[] = [];
+    private _catchCallbacks: ((reason: any) => void)[] = [];
 
-    then(callback: (value: T) => void) {
-        this._thenCallbacks.push(callback);
+    then(resolve: (value: T) => void, reject?: (reason: any) => void) {
+        this._thenCallbacks.push(resolve);
+        if (reject) {
+            this._catchCallbacks.push(reject);
+        }
     }
 
-    catch(callback: (rejection: any) => void) {
-        this._catchCallbacks.push(callback);
-    }
-
-    callThen(value: T) {
+    resolve(value: T) {
         while (this._thenCallbacks.length) {
             this._thenCallbacks.shift()(value);
         }
     }
 
-    callCatch(rejection: any) {
+    reject(reason: any) {
         while (this._catchCallbacks.length) {
-            this._catchCallbacks.shift()(rejection);
+            this._catchCallbacks.shift()(reason);
         }
     }
 }
@@ -319,12 +323,34 @@ describe("Deferred propjet property", () => {
         obj = new TestClass();
     });
 
+    it("is pending after first access and before promise resolving", () => {
+        var i = 0;
+        var promise: TestPromise<number>;
+        var def: () => Propjet.IDeferred<number, TestPromise<Number>> = propjet<number>().
+            from<TestPromise<Number>>().
+            get(
+            () => {
+                i++;
+                promise = new TestPromise<number>()
+                return promise;
+            }).
+            declare(true);
+        expect(i).toBe(0);
+        expect(def().pending).toBeTruthy();
+        expect(def().last).toBeUndefined();
+        expect(i).toBe(1);
+        promise.resolve(10);
+        expect(def().settled).toBeTruthy();
+        expect(def().last).toBe(10);
+        expect(i).toBe(1);
+    });
+
     it("stores last value from getter promise", () => {
         var getPromise: TestPromise<number>;
         obj.getPromise = () => getPromise = new TestPromise<number>();
         expect(obj.deferred.last).toBeNull();
         obj.deferred.get().then(value => expect(value).toBe(1));
-        getPromise.callThen(1);
+        getPromise.resolve(1);
         expect(obj.deferred.last).toBe(1);
     });
 
@@ -333,9 +359,54 @@ describe("Deferred propjet property", () => {
         var promise = new TestPromise<number>();
         obj.getPromise = () => promise;
         expect(obj.deferred.last).toBeNull();
-        promise.callThen(1);
+        promise.resolve(1);
         expect(obj.deferred.last).toBe(1);
         obj.backingValue = 2;
         expect(obj.deferred.last).toBeNull();
+    });
+
+    it("updates value of dependent properties ", () => {
+        var promise = new TestPromise<number>();
+        obj.getPromise = () => promise;
+        obj.deferred.get();
+        promise.resolve(1);
+        expect(obj.deferredLast).toBe(1);
+        obj.deferred.get(true);
+        promise.resolve(2);
+        expect(obj.deferredLast).toBe(2);
+    });
+
+    it("can accept last value from required clause", () => {
+        var calledWithLastValue = false;
+        var promise = new TestPromise<number>();
+        var def: () => Propjet.IDeferred<number, TestPromise<Number>> = propjet<number>().
+            from<TestPromise<Number>>().
+            require(() => def().last).
+            get(
+            (last) => {
+                if (last === 1) {
+                    calledWithLastValue = true;
+                }
+                return promise;
+            }).
+            declare(true);
+        expect(def().last).toBeUndefined();
+        promise.resolve(1);
+        expect(def().last).toBe(1);
+        expect(calledWithLastValue).toBeTruthy();
+    });
+
+    it("supports forced update", () => {
+        var i = 0;
+        obj.getPromise = () => {
+            i++;
+            return null;
+        };
+        expect(obj.deferred.get()).toBeNull;
+        expect(i).toBe(1);
+        expect(obj.deferred.get()).toBeNull;
+        expect(i).toBe(1);
+        expect(obj.deferred.get(true)).toBeNull;
+        expect(i).toBe(2);
     });
 });

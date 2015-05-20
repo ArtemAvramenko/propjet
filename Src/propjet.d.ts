@@ -353,8 +353,7 @@ declare module Propjet {
     }
 
     export interface IPromise<T> {
-        then(callback: (value: T) => any): any;
-        catch(callback: (reason: any) => any): any;
+        then(resolve: (value: T) => any, reject: (reason: any) => any): any;
     }
 }
 

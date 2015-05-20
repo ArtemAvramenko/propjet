@@ -1,5 +1,5 @@
 /*!
- propjet.js v1.1.0
+ propjet.js v1.2.0
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
@@ -358,8 +358,7 @@ declare module Propjet {
     }
 
     export interface IPromise<T> {
-        then(callback: (value: T) => any): any;
-        catch(callback: (reason: any) => any): any;
+        then(resolve: (value: T) => any, reject: (reason: any) => any): any;
     }
 }
 
