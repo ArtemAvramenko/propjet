@@ -4,6 +4,7 @@
   "main": "dist/propjet.js",
   "ignore": [
     "*",
-    "!dist"
+    "!dist",
+    "!dist\*.*"
   ]
 }
