@@ -3,11 +3,6 @@
   "version": "1.2.0",
   "main": "dist/propjet.js",
   "ignore": [
-    "**/.*",
-    "*.*",
-    "Scripts",
-    "Src",
-    "content",
-    "packages"
+    "!dist"
   ]
 }

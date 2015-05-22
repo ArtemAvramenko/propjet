@@ -7,7 +7,7 @@ Code licensed under [MIT License](LICENSE).
 
 #Installing
 Via [NuGet](https://www.nuget.org/packages/propjet.js/): `$ Install-Package propjet.js`
-
+Via [Bower](http://bower.io/): `$ bower install propjet.js`
 Manually: extract files from [PropjetJS.zip](PropjetJS.zip?raw=true)
 
 #Example
