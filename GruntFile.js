@@ -14,13 +14,13 @@
                     comments: true,
                     target: 'es3'
                 },
-                src: ["Src/propjet.d.ts", "Src/propjet.ts"]
+                src: ["src/propjet.d.ts", "src/propjet.ts"]
             }
         },
         uglify: {
             default: {
                 files: {
-                    'Src/propjet.min.js': ['Src/propjet.js']
+                    'src/propjet.min.js': ['src/propjet.js']
                 }
             }
         },
@@ -34,16 +34,16 @@
                         '*/\r\n'
                 },
                 files: {
-                    'Dist/propjet.js': ['Src/propjet.js'],
-                    'Dist/propjet.min.js': ['Src/propjet.min.js'],
-                    'Dist/propjet.d.ts': ['Src/propjet.d.ts'],
+                    'dist/propjet.js': ['src/propjet.js'],
+                    'dist/propjet.min.js': ['src/propjet.min.js'],
+                    'dist/propjet.d.ts': ['src/propjet.d.ts'],
                 }
             }
         },
         zip: {
             default: {
-                cwd: 'Dist/',
-                src: ['Dist/*.*'],
+                cwd: 'dist/',
+                src: ['dist/*.*'],
                 dest: 'PropjetJS.zip',
                 compression: 'DEFLATE'
             }
