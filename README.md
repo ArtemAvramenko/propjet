@@ -37,4 +37,4 @@ class Person
         declare(true); // function mode: get - propIE8(), set - propIE8(newValue)
 }
 ```
-more - [AngularJS demo](demo.ts), [Jasmine specs](Src/propjet.spec.ts)
+more - [AngularJS demo](demo.ts), [Jasmine specs](src/propjet.spec.ts)

@@ -3,8 +3,8 @@ obj
 packages
 /demo.js
 /*.js.map
-Src/*.js
-Src/*.js.map
+src/*.js
+src/*.js.map
 *.suo
 *.csproj.user
 node_modules
