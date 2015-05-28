@@ -1,5 +1,5 @@
 /*!
- propjet.js v1.2.0
+ propjet.js v1.3.0
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
@@ -20,6 +20,12 @@ this.propjet = (function () {
     }
     function throwReadonlyError() {
         throwError(1 /* readonlyPropertyWrite */);
+    }
+    function versionFuncDefault(obj, ver) {
+        if (ver == null) {
+            return obj.__prop__ver__;
+        }
+        obj.__prop__ver__ = ver;
     }
     // enumerates all elements in array
     var forEach;
@@ -74,15 +80,15 @@ this.propjet = (function () {
                 });
             }
             else {
-                obj.__prop__ver__ = ver;
+                versionFuncDefault(obj, ver);
             }
         };
     }
     if (!getVersion) {
-        getVersion = function (obj) { return obj.__prop__ver__; };
+        getVersion = versionFuncDefault;
     }
     if (!setVersion) {
-        setVersion = function (obj, ver) { return obj.__prop__ver__ = ver; };
+        setVersion = versionFuncDefault;
     }
     // #endregion
     var undef;
@@ -93,9 +99,6 @@ this.propjet = (function () {
             get: getter,
             set: setter
         });
-    }
-    function defReadonlyProperty(proxyObject, propertyName, object) {
-        defProperty(proxyObject, propertyName, function () { return object[propertyName]; }, throwReadonlyError);
     }
     function incrementVersion(value) {
         if (value == null) {
@@ -134,7 +137,7 @@ this.propjet = (function () {
                 if (!descriptor || !descriptor.get) {
                     data = object[propertyName];
                     if (isUnreadyProperty(data)) {
-                        createProperty(data)(propertyName, data);
+                        createProperty(propertyName, data);
                     }
                 }
             });
@@ -166,10 +169,10 @@ this.propjet = (function () {
             },
             "declare": function (functionMode) {
                 if (functionMode) {
-                    return createProperty(data)(propertyName, data, true);
+                    return createProperty(propertyName, data, true);
                 }
                 if (propertyName) {
-                    createProperty(data)(propertyName, data);
+                    createProperty(propertyName, data);
                 }
                 else {
                     data.__prop__unready__ = true;
@@ -195,300 +198,318 @@ this.propjet = (function () {
             }
             return result;
         }
-        function emptyValue(value) {
-            if (value === undef) {
-                return 1;
-            }
-            if (value == null) {
-                return 2;
-            }
-            if (value.length === 0 && getVersion(value) == null) {
-                for (var i in value) {
-                    return 0;
+        function createProperty(propertyName, data, functionMode) {
+            return data.isDeferred ? createDeferredProperty() : createRegularProperty();
+            function emptyValue(value) {
+                if (value === undef) {
+                    return 1;
                 }
-                return 3;
-            }
-            if (typeof value === "number" && isNaN(value)) {
-                return 4;
-            }
-            return 0;
-        }
-        function getArgs(data, args, caller) {
-            if (!data.src) {
-                return false;
-            }
-            // check requirements' changes
-            var same = data.vals && data.vals.length === data.src.length;
-            var ignoreOldValues = !same;
-            forEach(data.src, function (source, i) {
-                var old = ignoreOldValues ? undef : data.vals[i];
-                var arg;
-                if (caller) {
-                    arg = caller(object, source, [old != null ? old.val : undef]);
+                if (value == null) {
+                    return 2;
                 }
-                else {
-                    arg = source.call(object, old != null ? old.val : undef);
+                if (value.length === 0 && getVersion(value) == null) {
+                    for (var i in value) {
+                        return 0;
+                    }
+                    return 3;
                 }
-                args[i] = arg;
-                if (same) {
-                    var oldEmpty = emptyValue(old.val);
-                    var newEmpty = emptyValue(arg);
-                    if (oldEmpty) {
-                        same = oldEmpty === newEmpty;
+                if (typeof value === "number" && isNaN(value)) {
+                    return 4;
+                }
+                return 0;
+            }
+            function getArgs(args, caller) {
+                if (!data.src) {
+                    return false;
+                }
+                // check requirements' changes
+                var same = data.vals && data.vals.length === data.src.length;
+                var ignoreOldValues = !same;
+                forEach(data.src, function (source, i) {
+                    var old = ignoreOldValues ? undef : data.vals[i];
+                    var arg;
+                    if (caller) {
+                        arg = caller(source, [old != null ? old.val : undef]);
                     }
                     else {
-                        same = !newEmpty && old.val === arg && old.ver === getVersion(arg) && old.len === arg.length;
+                        arg = source.call(object, old != null ? old.val : undef);
                     }
-                }
-            });
-            return same;
-        }
-        function saveArgs(data, args) {
-            var sourceValues = [];
-            forEach(args, function (arg, i) {
-                sourceValues[i] = {
-                    val: arg,
-                    ver: arg != null ? getVersion(arg) : undef,
-                    len: arg != null ? arg.length : undef
-                };
-            });
-            data.vals = sourceValues;
-        }
-        function createProperty(data) {
-            return data.isDeferred ? createDeferredProperty : createRegularProperty;
-        }
-        function createRegularProperty(propertyName, data, functionMode) {
-            if (functionMode) {
-                function func(value) {
-                    if (arguments.length === 0) {
-                        return getter();
+                    args[i] = arg;
+                    if (same) {
+                        var oldEmpty = emptyValue(old.val);
+                        var newEmpty = emptyValue(arg);
+                        if (oldEmpty) {
+                            same = oldEmpty === newEmpty;
+                        }
+                        else {
+                            same = !newEmpty && old.val === arg && old.ver === getVersion(arg) && old.len === arg.length;
+                        }
                     }
-                    setter(value);
-                }
-                if (propertyName) {
-                    object[propertyName] = func;
-                }
-                return func;
+                });
+                return same;
             }
-            if (noProperties) {
-                throwError(0 /* noPropertySupport */);
+            function saveArgs(args) {
+                var sourceValues = [];
+                forEach(args, function (arg, i) {
+                    sourceValues[i] = {
+                        val: arg,
+                        ver: arg != null ? getVersion(arg) : undef,
+                        len: arg != null ? arg.length : undef
+                    };
+                });
+                data.vals = sourceValues;
             }
-            defProperty(object, propertyName, getter, setter);
-            function getter() {
-                var oldLevel = data.lvl;
-                if (oldLevel > 0) {
-                    if (oldLevel === nestingLevel) {
-                        return data.res;
+            function createRegularProperty() {
+                if (functionMode) {
+                    function func(value) {
+                        if (arguments.length === 0) {
+                            return getter();
+                        }
+                        setter(value);
                     }
-                    throwError(2 /* circularDependency */);
+                    if (propertyName) {
+                        object[propertyName] = func;
+                    }
+                    return func;
                 }
-                nestingLevel++;
-                try {
-                    data.lvl = nestingLevel;
-                    var args = [];
-                    var same = getArgs(data, args);
-                    // property without getter
-                    if (!data.get) {
-                        // has initializer
-                        if (data.init) {
-                            if (data.src) {
+                if (noProperties) {
+                    throwError(0 /* noPropertySupport */);
+                }
+                defProperty(object, propertyName, getter, setter);
+                function filter(value) {
+                    if (data.fltr) {
+                        return data.fltr.call(object, value, data.res);
+                    }
+                    return value;
+                }
+                function getter() {
+                    var oldLevel = data.lvl;
+                    if (oldLevel > 0) {
+                        if (oldLevel === nestingLevel) {
+                            return data.res;
+                        }
+                        throwError(2 /* circularDependency */);
+                    }
+                    nestingLevel++;
+                    try {
+                        data.lvl = nestingLevel;
+                        var args = [];
+                        var same = getArgs(args);
+                        // property without getter
+                        if (!data.get) {
+                            // has initializer
+                            if (data.init) {
                                 // has requirements - reinitialize on change
-                                if (!same) {
+                                if (!data.src || !same) {
                                     data.res = data.init.call(object);
-                                    saveArgs(data, args);
+                                }
+                                if (data.src) {
+                                    saveArgs(args);
+                                }
+                                else {
+                                    // no requirement - call init once
+                                    data.init = undef;
                                 }
                             }
+                        }
+                        else if (!same) {
+                            // call getter
+                            var newResult = data.get.apply(object, args);
+                            // filter new result
+                            newResult = filter(newResult);
+                            // store last arguments and result
+                            if (data.src) {
+                                saveArgs(args);
+                            }
+                            data.res = newResult;
+                        }
+                        return data.res;
+                    }
+                    finally {
+                        nestingLevel--;
+                        data.lvl = oldLevel;
+                    }
+                }
+                function setter(value) {
+                    if (data.lvl) {
+                        throwError(3 /* recursivePropertyWrite */);
+                    }
+                    nestingLevel++;
+                    try {
+                        data.lvl = -1;
+                        // override property
+                        if (isUnreadyProperty(value)) {
+                            data = value;
+                            return;
+                        }
+                        // filter new value
+                        value = filter(value);
+                        if (data.get) {
+                            if (!data.set) {
+                                throwReadonlyError();
+                            }
+                        }
+                        else {
+                            // property without getter
+                            if (data.src) {
+                                var args = [];
+                                getArgs(args);
+                                saveArgs(args);
+                            }
                             else {
-                                // no requirement - call init once
-                                data.res = data.init.call(object);
                                 data.init = undef;
                             }
                         }
-                    }
-                    else if (!same) {
-                        // call getter
-                        var newResult = data.get.apply(object, args);
-                        // filter new result
-                        if (data.fltr) {
-                            newResult = data.fltr.call(object, newResult, data.res);
+                        // call setter
+                        if (data.set) {
+                            data.set.call(object, value);
                         }
-                        // store last arguments and result
-                        if (data.src) {
-                            saveArgs(data, args);
+                        if (!data.get) {
+                            data.res = value;
                         }
-                        data.res = newResult;
                     }
-                    return data.res;
-                }
-                finally {
-                    nestingLevel--;
-                    data.lvl = oldLevel;
+                    finally {
+                        nestingLevel--;
+                        data.lvl = 0;
+                    }
                 }
             }
-            function setter(value) {
-                if (data.lvl) {
-                    throwError(3 /* recursivePropertyWrite */);
-                }
-                nestingLevel++;
-                try {
-                    data.lvl = -1;
-                    // override property
-                    if (isUnreadyProperty(value)) {
-                        data = value;
-                        return;
+            function createDeferredProperty() {
+                var promise;
+                var deferred = {};
+                var isInCallback;
+                var readonlyProxy;
+                deferred.get = function (forceUpdate) {
+                    if (forceUpdate && !deferred.pending) {
+                        checkUpdate(forceUpdate);
                     }
-                    // filter new value
+                    return promise;
+                };
+                function filter(value) {
                     if (data.fltr) {
-                        value = data.fltr.call(object, value, data.res);
+                        return wrapCall(data.fltr, [value, deferred.last]);
                     }
-                    if (data.get) {
-                        if (!data.set) {
-                            throwReadonlyError();
-                        }
+                    return value;
+                }
+                function defReadonlyProperty(propertyName) {
+                    defProperty(readonlyProxy, propertyName, function () { return deferred[propertyName]; }, throwReadonlyError);
+                }
+                deferred.set = function (newValue, isDeferred) {
+                    if (!data.set) {
+                        throwReadonlyError();
+                    }
+                    newValue = filter(newValue);
+                    incrementVersion(readonlyProxy || deferred);
+                    var args = [];
+                    getArgs(args, wrapCall);
+                    saveArgs(args);
+                    args.unshift(newValue);
+                    var promise = wrapCall(data.set, args);
+                    if (!isDeferred) {
+                        deferred.last = newValue;
+                    }
+                    waitPromise(promise);
+                    return promise;
+                };
+                setValue(undef, 1 /* reset */);
+                if (functionMode) {
+                    var func = function () {
+                        checkUpdate();
+                        return deferred;
+                    };
+                    if (propertyName) {
+                        object[propertyName] = func;
+                    }
+                    return func;
+                }
+                if (noProperties) {
+                    throwError(0 /* noPropertySupport */);
+                }
+                // create readonly property
+                readonlyProxy = {};
+                for (var prop in deferred) {
+                    defReadonlyProperty(prop);
+                }
+                defProperty(object, propertyName, function () {
+                    checkUpdate();
+                    return readonlyProxy;
+                }, function (newData) {
+                    // override property
+                    if (isUnreadyProperty(newData)) {
+                        data = newData;
+                        setValue(undef, 1 /* reset */);
                     }
                     else {
-                        // property without getter
-                        if (data.src) {
-                            var args = [];
-                            getArgs(data, args);
-                            saveArgs(data, args);
-                        }
-                        else {
-                            data.init = undef;
-                        }
-                        data.res = value;
-                    }
-                    // call setter
-                    if (data.set) {
-                        data.set.call(object, value);
-                    }
-                }
-                finally {
-                    nestingLevel--;
-                    data.lvl = 0;
-                }
-            }
-        }
-        function createDeferredProperty(propertyName, data, functionMode) {
-            var promise;
-            var deferred = {};
-            var isInCallback;
-            deferred.get = function (forceUpdate) {
-                if (forceUpdate && !deferred.pending) {
-                    checkUpdate(forceUpdate);
-                }
-                return promise;
-            };
-            deferred.set = function (newValue, isDeferred) {
-                if (!data.set) {
-                    throwReadonlyError();
-                }
-                incrementVersion(readonlyProxy || deferred);
-                var args = [];
-                getArgs(data, args, wrapCall);
-                saveArgs(data, args);
-                args.unshift(newValue);
-                var promise = wrapCall(object, data.set, args);
-                if (!isDeferred) {
-                    deferred.last = newValue;
-                }
-                waitPromise(promise);
-                return promise;
-            };
-            setValue(undef);
-            if (functionMode) {
-                var func = function () {
-                    checkUpdate();
-                    return deferred;
-                };
-                if (propertyName) {
-                    object[propertyName] = func;
-                }
-                return func;
-            }
-            if (noProperties) {
-                throwError(0 /* noPropertySupport */);
-            }
-            // create readonly property
-            var readonlyProxy = {};
-            for (var prop in deferred) {
-                defReadonlyProperty(readonlyProxy, prop, deferred);
-            }
-            defProperty(object, propertyName, function () {
-                checkUpdate();
-                return readonlyProxy;
-            }, function (newData) {
-                // override property
-                if (isUnreadyProperty(newData)) {
-                    data = newData;
-                    setValue(undef);
-                }
-                else {
-                    throwReadonlyError();
-                }
-            });
-            function wrapCall(thisArg, func, args) {
-                if (isInCallback) {
-                    throwError(4 /* circularPromises */);
-                }
-                isInCallback = true;
-                try {
-                    return func.apply(thisArg, args || []);
-                }
-                finally {
-                    isInCallback = false;
-                }
-            }
-            function setStatus(newStatus) {
-                deferred.pending = newStatus === 0 /* pending */;
-                deferred.fulfilled = newStatus === 1 /* fulfilled */;
-                deferred.rejected = newStatus === 2 /* rejected */;
-                deferred.settled = newStatus !== 0 /* pending */;
-            }
-            function setValue(value, isRejection) {
-                incrementVersion(readonlyProxy || deferred);
-                if (!isRejection) {
-                    deferred.last = value;
-                }
-                deferred.rejectReason = isRejection ? value : undef;
-                setStatus(isRejection ? 2 /* rejected */ : 1 /* fulfilled */);
-            }
-            function waitPromise(promise) {
-                var version = incrementVersion(data);
-                if (!promise) {
-                    setValue(undefined);
-                    return;
-                }
-                promise.then(function (value) {
-                    // ignore callbacks if newer promise is active
-                    if (getVersion(data) === version) {
-                        setValue(value);
-                    }
-                }, function (reason) {
-                    // ignore callbacks if newer promise is active
-                    if (getVersion(data) === version) {
-                        setValue(reason, true);
+                        throwReadonlyError();
                     }
                 });
-            }
-            function checkUpdate(forceUpdate) {
-                if (isInCallback) {
-                    return;
-                }
-                var args = [];
-                var same = getArgs(data, args, wrapCall);
-                if (!same) {
-                    forceUpdate = true;
-                    if (data.init) {
-                        deferred.last = wrapCall(object, data.init);
+                function wrapCall(func, args) {
+                    if (isInCallback) {
+                        throwError(4 /* circularPromises */);
+                    }
+                    isInCallback = true;
+                    try {
+                        return func.apply(object, args || []);
+                    }
+                    finally {
+                        isInCallback = false;
                     }
                 }
-                if (forceUpdate) {
+                function setStatus(newStatus) {
+                    deferred.pending = !newStatus;
+                    deferred.fulfilled = newStatus === 1 /* fulfilled */;
+                    deferred.rejected = newStatus === 2 /* rejected */;
+                    deferred.settled = !!newStatus;
+                }
+                function setValue(value, mode) {
                     incrementVersion(readonlyProxy || deferred);
-                    saveArgs(data, args);
-                    promise = wrapCall(object, data.get, args);
-                    setStatus(0 /* pending */);
-                    waitPromise(promise);
+                    var notRejection = mode !== 2 /* rejection */;
+                    if (notRejection) {
+                        if (!mode) {
+                            value = filter(value);
+                        }
+                        deferred.last = value;
+                    }
+                    deferred.rejectReason = notRejection ? undef : value;
+                    setStatus(notRejection ? 1 /* fulfilled */ : 2 /* rejected */);
+                }
+                function waitPromise(promise) {
+                    var version = incrementVersion(data);
+                    if (!promise) {
+                        setValue(undef, 0 /* normal */);
+                        return;
+                    }
+                    promise.then(function (value) {
+                        // ignore callbacks if newer promise is active
+                        if (getVersion(data) === version) {
+                            setValue(value, 0 /* normal */);
+                        }
+                    }, function (reason) {
+                        // ignore callbacks if newer promise is active
+                        if (getVersion(data) === version) {
+                            setValue(reason, 2 /* rejection */);
+                        }
+                    });
+                }
+                function checkUpdate(forceUpdate) {
+                    if (isInCallback) {
+                        return;
+                    }
+                    var args = [];
+                    var same = getArgs(args, wrapCall);
+                    if (!same) {
+                        forceUpdate = true;
+                        if (data.init) {
+                            deferred.last = wrapCall(data.init);
+                        }
+                    }
+                    if (forceUpdate) {
+                        incrementVersion(readonlyProxy || deferred);
+                        saveArgs(args);
+                        promise = wrapCall(data.get, args);
+                        setStatus(0 /* pending */);
+                        waitPromise(promise);
+                    }
                 }
             }
         }

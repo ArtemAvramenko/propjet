@@ -11,10 +11,6 @@ class TestClass {
 
     backingObject: TestClass;
 
-    getPromise: (arg: number) => TestPromise<number>;
-
-    setPromise: (newValue: number, arg: number) => TestPromise<number>;
-
     simpleGet = propjet<number>().
         get(() => this.backingValue).
         declare();
@@ -96,17 +92,23 @@ class TestClass {
         default(() => 0).
         declare();
 
+    simple = propjet<number>().
+        default(() => 0).
+        declare();
+
     deferred = propjet<number>().
         from<TestPromise<number>>().
-        require(() => this.backingValue).
-        default(() => null).
-        get(arg => this.getPromise(arg)).
-        set((newValue, arg) => this.setPromise(newValue, arg)).
+        get(() => (this.callCount++ , new TestPromise<number>())).
         declare();
 
     deferredLast = propjet<number>().
         require(() => this.deferred).
         get(def => def.last).
+        declare()
+
+    deferredStatus = propjet<string>().
+        require(() => this.deferred).
+        get(def => def.pending ? "pending" : (def.rejected ? "rejected" : "fulfilled")).
         declare()
 }
 
@@ -308,11 +310,24 @@ describe("Regular propjet property", () => {
     });
 
     it("supports read in setter when getter is not defined", () => {
+        var lastValue: number;
         obj.backingFunction = value => {
-            expect(obj.setterOnly).toBe(1);
+            expect(obj.setterOnly).toBe(lastValue);
+            lastValue = value;
             return undefined;
         };
         obj.setterOnly = 1;
+        obj.setterOnly = 2;
+    });
+
+    it("supports read in setter when getter is defined", () => {
+        var lastValue: number;
+        obj.simple = propjet<number>().
+            get(() => lastValue).
+            set(value => (expect(obj.simple).toBe(lastValue), lastValue = value)).
+            declare();
+        obj.simple = 1;
+        obj.simple = 2;
     });
 });
 
@@ -324,89 +339,112 @@ describe("Deferred propjet property", () => {
     });
 
     it("is pending after first access and before promise resolving", () => {
-        var i = 0;
-        var promise: TestPromise<number>;
-        var def: () => Propjet.IDeferred<number, TestPromise<Number>> = propjet<number>().
-            from<TestPromise<Number>>().
-            get(
-            () => {
-                i++;
-                promise = new TestPromise<number>()
-                return promise;
-            }).
-            declare(true);
-        expect(i).toBe(0);
-        expect(def().pending).toBeTruthy();
-        expect(def().last).toBeUndefined();
-        expect(i).toBe(1);
-        promise.resolve(10);
-        expect(def().settled).toBeTruthy();
-        expect(def().last).toBe(10);
-        expect(i).toBe(1);
+        expect(obj.callCount).toBe(0);
+        expect(obj.deferred.pending).toBeTruthy();
+        expect(obj.deferred.last).toBeUndefined();
+        expect(obj.callCount).toBe(1);
+        obj.deferred.get().resolve(10);
+        expect(obj.deferred.settled).toBeTruthy();
+        expect(obj.deferred.last).toBe(10);
+        expect(obj.callCount).toBe(1);
     });
 
     it("stores last value from getter promise", () => {
-        var getPromise: TestPromise<number>;
-        obj.getPromise = () => getPromise = new TestPromise<number>();
-        expect(obj.deferred.last).toBeNull();
+        var promise = obj.deferred.get();
+        expect(obj.deferred.last).toBeUndefined();
         obj.deferred.get().then(value => expect(value).toBe(1));
-        getPromise.resolve(1);
+        promise.resolve(1);
         expect(obj.deferred.last).toBe(1);
     });
 
     it("resets last value to default on requirement change", () => {
-        obj.backingValue = 1;
+        var source = 0;
+        obj.deferred = propjet<number>().
+            from<TestPromise<number>>().
+            require(() => source).
+            default(() => 0).
+            get(() => new TestPromise<number>()).
+            declare();
         var promise = new TestPromise<number>();
-        obj.getPromise = () => promise;
-        expect(obj.deferred.last).toBeNull();
-        promise.resolve(1);
+        expect(obj.deferred.last).toBe(0);
+        obj.deferred.get().resolve(1);
         expect(obj.deferred.last).toBe(1);
-        obj.backingValue = 2;
-        expect(obj.deferred.last).toBeNull();
+        source++;
+        expect(obj.deferred.last).toBe(0);
     });
 
-    it("updates value of dependent properties ", () => {
-        var promise = new TestPromise<number>();
-        obj.getPromise = () => promise;
-        obj.deferred.get();
-        promise.resolve(1);
+    it("updates value of dependent properties", () => {
+        expect(obj.deferredLast).toBeUndefined();
+        expect(obj.deferredStatus).toBe("pending");
+        obj.deferred.get().resolve(1);
+        expect(obj.deferredStatus).toBe("fulfilled");
         expect(obj.deferredLast).toBe(1);
-        obj.deferred.get(true);
-        promise.resolve(2);
+        obj.deferred.get(true).resolve(2);
         expect(obj.deferredLast).toBe(2);
     });
 
     it("can accept last value from required clause", () => {
-        var calledWithLastValue = false;
-        var promise = new TestPromise<number>();
-        var def: () => Propjet.IDeferred<number, TestPromise<Number>> = propjet<number>().
-            from<TestPromise<Number>>().
-            require(() => def().last).
-            get(
-            (last) => {
-                if (last === 1) {
-                    calledWithLastValue = true;
-                }
-                return promise;
-            }).
-            declare(true);
-        expect(def().last).toBeUndefined();
-        promise.resolve(1);
-        expect(def().last).toBe(1);
-        expect(calledWithLastValue).toBeTruthy();
+        var lastSource: number;
+        var callCount = 0;
+        obj.deferred = propjet<number>().
+            from<TestPromise<number>>().
+            require(() => obj.deferred.last).
+            get((last) => (callCount++ , lastSource = last, new TestPromise<number>())).
+            declare();
+        expect(obj.deferred.last).toBeUndefined();
+        obj.deferred.get().resolve(1);
+        expect(obj.deferred.last).toBe(1);
+        expect(obj.deferred.pending).toBeTruthy();
+        expect(lastSource).toBe(1);
+        obj.deferred.get().resolve(1);
+        expect(callCount).toBe(2);
+        expect(obj.deferred.fulfilled).toBeTruthy();
     });
 
     it("supports forced update", () => {
-        var i = 0;
-        obj.getPromise = () => {
-            i++;
-            return null;
-        };
-        expect(obj.deferred.get()).toBeNull;
-        expect(i).toBe(1);
-        expect(obj.deferred.get()).toBeNull;
-        expect(i).toBe(1);
-        expect(obj.deferred.get(true)).toBeNull;
-        expect(i).toBe(2);
+        expect(obj.deferred.last).toBeUndefined();
+        expect(obj.callCount).toBe(1);
+        obj.deferred.get().resolve(1);
+        expect(obj.callCount).toBe(1);
+        obj.deferred.get(true);
+        expect(obj.callCount).toBe(2);
+        obj.deferred.get().resolve(2);
+        expect(obj.callCount).toBe(2);
+    });
+
+    it("supports filtering", () => {
+        var expectedValue: number;
+        obj.deferred = propjet<number>().
+            from<TestPromise<number>>().
+            get(() => new TestPromise<number>()).
+            with((value, oldValue) => value + (oldValue || 0)).
+            set(value => (expect(value).toBe(expectedValue), new TestPromise<number>())).
+            declare();
+        var promise = obj.deferred.get();
+        promise.resolve(1);
+        expect(obj.deferred.last).toBe(1);
+        expectedValue = 21;
+        promise = obj.deferred.set(20);
+        promise.resolve(300);
+        expect(obj.deferred.last).toBe(321);
+        expectedValue = 4321;
+        promise = obj.deferred.set(4000, true);
+        promise.resolve(5000);
+        expect(obj.deferred.last).toBe(5321);
+    });
+
+    it("does not reset value on forced update", () => {
+        obj.deferred = propjet<number>().
+            from<TestPromise<number>>().
+            require(() => "const").
+            default(() => 0).
+            get(() => new TestPromise<number>()).
+            declare();
+        obj.deferred.get().resolve(1);
+        expect(obj.deferred.last).toBe(1);
+        obj.deferred.get(true);
+        expect(obj.deferred.last).toBe(1);
+        obj.deferred.get().resolve(2);
+        expect(obj.deferred.last).toBe(2);
     });
 });

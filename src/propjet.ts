@@ -35,10 +35,12 @@ declare module Propjet {
     }
 
     export interface IFunctionCaller {
-        (thisArg: any, func: (arg?: any) => any, args: any[]): any;
+        (func: (arg?: any) => any, args: any[]): any;
     }
 
     const enum DeferredStatus { pending, fulfilled, rejected }
+
+    const enum SetMode { normal, reset, rejection }
 
     const enum Error { noPropertySupport, readonlyPropertyWrite, circularDependency, recursivePropertyWrite, circularPromises }
 }
@@ -62,6 +64,13 @@ declare module Propjet {
 
     function throwReadonlyError() {
         throwError(Propjet.Error.readonlyPropertyWrite);
+    }
+
+    function versionFuncDefault(obj: Propjet.IVersionObject, ver?: number): number {
+        if (ver == null) {
+            return obj.__prop__ver__;
+        }
+        obj.__prop__ver__ = ver;
     }
 
     // enumerates all elements in array
@@ -120,15 +129,15 @@ declare module Propjet {
                 });
             }
             else {
-                obj.__prop__ver__ = ver;
+                versionFuncDefault(obj, ver);
             }
         };
     }
     if (!getVersion) {
-        getVersion = obj => obj.__prop__ver__;
+        getVersion = versionFuncDefault;
     }
     if (!setVersion) {
-        setVersion = (obj, ver) => obj.__prop__ver__ = ver;
+        setVersion = versionFuncDefault;
     }
     // #endregion
 
@@ -141,10 +150,6 @@ declare module Propjet {
             get: getter,
             set: setter
         });
-    }
-
-    function defReadonlyProperty(proxyObject: any, propertyName: string, object: any) {
-        defProperty(proxyObject, propertyName, () => object[propertyName], throwReadonlyError);
     }
 
     function incrementVersion(value: Propjet.IVersionObject): number {
@@ -189,7 +194,7 @@ declare module Propjet {
                 if (!descriptor || !descriptor.get) {
                     data = object[propertyName];
                     if (isUnreadyProperty(data)) {
-                        createProperty(data)(propertyName, data);
+                        createProperty(propertyName, data);
                     }
                 }
             });
@@ -219,10 +224,10 @@ declare module Propjet {
             },
             "declare": (functionMode?: boolean) => {
                 if (functionMode) {
-                    return <any>createProperty(data)(propertyName, data, true);
+                    return <any>createProperty(propertyName, data, true);
                 }
                 if (propertyName) {
-                    createProperty(data)(propertyName, data);
+                    createProperty(propertyName, data);
                 }
                 else {
                     data.__prop__unready__ = true;
@@ -257,344 +262,368 @@ declare module Propjet {
             return result;
         }
 
-        function emptyValue(value: any): number {
-            if (value === undef) {
-                return 1;
-            }
-            if (value == null) {
-                return 2;
-            }
-            if (value.length === 0 && getVersion(value) == null) {
-                /* tslint:disable */
-                for (var i in value)
-                /* tslint:enable */ {
-                    return 0;
-                }
-                return 3;
-            }
-            if (typeof value === "number" && isNaN(value)) {
-                return 4;
-            }
-            return 0;
-        }
+        function createProperty(propertyName: string, data: Propjet.IPropData<T>, functionMode?: boolean): any {
+            return data.isDeferred ? createDeferredProperty() : createRegularProperty();
 
-        function getArgs(data: Propjet.IPropData<T>, args: Propjet.IVersionObject[], caller?: Propjet.IFunctionCaller): boolean {
-            if (!data.src) {
-                return false;
+            function emptyValue(value: any): number {
+                if (value === undef) {
+                    return 1;
+                }
+                if (value == null) {
+                    return 2;
+                }
+                if (value.length === 0 && getVersion(value) == null) {
+                    /* tslint:disable */
+                    for (var i in value)
+                    /* tslint:enable */ {
+                        return 0;
+                    }
+                    return 3;
+                }
+                if (typeof value === "number" && isNaN(value)) {
+                    return 4;
+                }
+                return 0;
             }
 
-            // check requirements' changes
-            var same = data.vals && data.vals.length === data.src.length;
-            var ignoreOldValues = !same;
+            function getArgs(args: Propjet.IVersionObject[], caller?: Propjet.IFunctionCaller): boolean {
+                if (!data.src) {
+                    return false;
+                }
 
-            forEach(data.src, (source, i) => {
-                var old = ignoreOldValues ? undef : data.vals[i];
-                var arg: Propjet.IVersionObject;
-                if (caller) {
-                    arg = caller(object, source, [old != null ? old.val : undef]);
-                }
-                else {
-                    arg = source.call(object, old != null ? old.val : undef);
-                }
-                args[i] = arg;
-                if (same) {
-                    var oldEmpty = emptyValue(old.val);
-                    var newEmpty = emptyValue(arg);
-                    if (oldEmpty) {
-                        same = oldEmpty === newEmpty;
+                // check requirements' changes
+                var same = data.vals && data.vals.length === data.src.length;
+                var ignoreOldValues = !same;
+
+                forEach(data.src, (source, i) => {
+                    var old = ignoreOldValues ? undef : data.vals[i];
+                    var arg: Propjet.IVersionObject;
+                    if (caller) {
+                        arg = caller(source, [old != null ? old.val : undef]);
                     }
                     else {
-                        same = !newEmpty && old.val === arg && old.ver === getVersion(arg) && old.len === arg.length;
+                        arg = source.call(object, old != null ? old.val : undef);
                     }
-                }
-            });
-
-            return same;
-        }
-
-        function saveArgs(data: Propjet.IPropData<T>, args: Propjet.IVersionObject[]) {
-            var sourceValues: Propjet.ISourceValue[] = [];
-            forEach(args, (arg, i) => {
-                sourceValues[i] = {
-                    val: arg,
-                    ver: arg != null ? getVersion(arg) : undef,
-                    len: arg != null ? arg.length : undef
-                };
-            });
-            data.vals = sourceValues;
-        }
-
-        function createProperty(data: Propjet.IPropData<T>) {
-            return data.isDeferred ? createDeferredProperty : createRegularProperty;
-        }
-
-        function createRegularProperty(propertyName: string, data: Propjet.IPropData<T>, functionMode?: boolean): any {
-            if (functionMode) {
-                function func(value: T) {
-                    if (arguments.length === 0) {
-                        return getter();
-                    }
-                    setter(value);
-                }
-
-                if (propertyName) {
-                    object[propertyName] = func;
-                }
-                return func;
-            }
-
-            if (noProperties) {
-                throwError(Propjet.Error.noPropertySupport);
-            }
-
-            defProperty(object, propertyName, getter, setter);
-
-            function getter(): T {
-                var oldLevel = data.lvl;
-                if (oldLevel > 0) {
-                    if (oldLevel === nestingLevel) {
-                        return data.res;
-                    }
-                    throwError(Propjet.Error.circularDependency);
-                }
-
-                nestingLevel++;
-                try {
-                    data.lvl = nestingLevel;
-
-                    var args: Propjet.IVersionObject[] = [];
-                    var same = getArgs(data, args);
-
-                    // property without getter
-                    if (!data.get) {
-                        // has initializer
-                        if (data.init) {
-                            if (data.src) {
-                                // has requirements - reinitialize on change
-                                if (!same) {
-                                    data.res = data.init.call(object);
-                                    saveArgs(data, args);
-                                }
-                            }
-                            else {
-                                // no requirement - call init once
-                                data.res = data.init.call(object);
-                                data.init = undef;
-                            }
-                        }
-                    }
-                    else if (!same) {
-                        // call getter
-                        var newResult = data.get.apply(object, args);
-
-                        // filter new result
-                        if (data.fltr) {
-                            newResult = data.fltr.call(object, newResult, data.res);
-                        }
-
-                        // store last arguments and result
-                        if (data.src) {
-                            saveArgs(data, args);
-                        }
-                        data.res = newResult;
-                    }
-
-                    return data.res;
-                }
-                finally {
-                    nestingLevel--;
-                    data.lvl = oldLevel;
-                }
-            }
-
-            function setter(value: T) {
-                if (data.lvl) {
-                    throwError(Propjet.Error.recursivePropertyWrite);
-                }
-
-                nestingLevel++;
-                try {
-                    data.lvl = -1;
-
-                    // override property
-                    if (isUnreadyProperty(<any>value)) {
-                        data = <any>value;
-                        return;
-                    }
-
-                    // filter new value
-                    if (data.fltr) {
-                        value = data.fltr.call(object, value, data.res);
-                    }
-
-                    if (data.get) {
-                        if (!data.set) {
-                            throwReadonlyError();
-                        }
-                    }
-                    else {
-                        // property without getter
-                        if (data.src) {
-                            var args: Propjet.IVersionObject[] = [];
-                            getArgs(data, args);
-                            saveArgs(data, args);
+                    args[i] = arg;
+                    if (same) {
+                        var oldEmpty = emptyValue(old.val);
+                        var newEmpty = emptyValue(arg);
+                        if (oldEmpty) {
+                            same = oldEmpty === newEmpty;
                         }
                         else {
-                            data.init = undef;
+                            same = !newEmpty && old.val === arg && old.ver === getVersion(arg) && old.len === arg.length;
                         }
-                        data.res = value;
-                    }
-
-                    // call setter
-                    if (data.set) {
-                        data.set.call(object, value);
-                    }
-                }
-                finally {
-                    nestingLevel--;
-                    data.lvl = 0;
-                }
-            }
-        }
-
-        function createDeferredProperty(propertyName: string, data: Propjet.IPropData<T>, functionMode?: boolean): any {
-            var promise: Propjet.IPromise<T>;
-            var deferred = <Propjet.IDeferred<T, Propjet.IPromise<T>>>{};
-            var isInCallback: boolean;
-
-            deferred.get = (forceUpdate?: boolean) => {
-                if (forceUpdate && !deferred.pending) {
-                    checkUpdate(forceUpdate);
-                }
-                return promise;
-            };
-
-            deferred.set = (newValue: T, isDeferred?: boolean) => {
-                if (!data.set) {
-                    throwReadonlyError();
-                }
-                incrementVersion(<any>readonlyProxy || deferred);
-                var args = [];
-                getArgs(data, args, wrapCall);
-                saveArgs(data, args);
-                args.unshift(newValue);
-
-                var promise = <Propjet.IPromise<T>>wrapCall(object, data.set, args);
-                if (!isDeferred) {
-                    deferred.last = newValue;
-                }
-                waitPromise(promise);
-                return promise;
-            };
-
-            setValue(undef);
-
-            if (functionMode) {
-                var func = () => {
-                    checkUpdate();
-                    return deferred;
-                };
-                if (propertyName) {
-                    object[propertyName] = func;
-                }
-                return func;
-            }
-
-            if (noProperties) {
-                throwError(Propjet.Error.noPropertySupport);
-            }
-
-            // create readonly property
-            var readonlyProxy = {};
-            for (var prop in deferred) {
-                defReadonlyProperty(readonlyProxy, prop, deferred);
-            }
-            defProperty(object, propertyName,
-                () => {
-                    checkUpdate();
-                    return readonlyProxy;
-                },
-                (newData: Propjet.IPropData<T>) => {
-                    // override property
-                    if (isUnreadyProperty(newData)) {
-                        data = newData;
-                        setValue(undef);
-                    }
-                    else {
-                        throwReadonlyError();
                     }
                 });
 
-            function wrapCall(thisArg: any, func: (arg?: any) => any, args?: any[]): any {
-                if (isInCallback) {
-                    throwError(Propjet.Error.circularPromises);
-                }
-                isInCallback = true;
-                try {
-                    return func.apply(thisArg, args || []);
-                }
-                finally {
-                    isInCallback = false;
-                }
+                return same;
             }
 
-            function setStatus(newStatus: Propjet.DeferredStatus) {
-                deferred.pending = newStatus === Propjet.DeferredStatus.pending;
-                deferred.fulfilled = newStatus === Propjet.DeferredStatus.fulfilled;
-                deferred.rejected = newStatus === Propjet.DeferredStatus.rejected;
-                deferred.settled = newStatus !== Propjet.DeferredStatus.pending;
+            function saveArgs(args: Propjet.IVersionObject[]) {
+                var sourceValues: Propjet.ISourceValue[] = [];
+                forEach(args, (arg, i) => {
+                    sourceValues[i] = {
+                        val: arg,
+                        ver: arg != null ? getVersion(arg) : undef,
+                        len: arg != null ? arg.length : undef
+                    };
+                });
+                data.vals = sourceValues;
             }
 
-            function setValue(value: any, isRejection?: boolean) {
-                incrementVersion(<any>readonlyProxy || deferred);
-                if (!isRejection) {
-                    deferred.last = value;
-                }
-                deferred.rejectReason = isRejection ? value : undef;
-                setStatus(isRejection ? Propjet.DeferredStatus.rejected : Propjet.DeferredStatus.fulfilled);
-            }
-
-            function waitPromise(promise: Propjet.IPromise<T>) {
-                var version = incrementVersion(<any>data);
-
-                if (!promise) {
-                    setValue(undefined);
-                    return;
-                }
-
-                promise.then(
-                    value => {
-                        // ignore callbacks if newer promise is active
-                        if (getVersion(<any>data) === version) {
-                            setValue(value);
+            function createRegularProperty(): any {
+                if (functionMode) {
+                    function func(value: T) {
+                        if (arguments.length === 0) {
+                            return getter();
                         }
-                    },
-                    reason => {
-                        // ignore callbacks if newer promise is active
-                        if (getVersion(<any>data) === version) {
-                            setValue(reason, true);
-                        }
-                    });
-            }
+                        setter(value);
+                    }
 
-            function checkUpdate(forceUpdate?: boolean) {
-                if (isInCallback) {
-                    return;
+                    if (propertyName) {
+                        object[propertyName] = func;
+                    }
+                    return func;
                 }
-                var args: Propjet.IVersionObject[] = [];
-                var same = getArgs(data, args, wrapCall);
-                if (!same) {
-                    forceUpdate = true;
-                    if (data.init) {
-                        deferred.last = wrapCall(object, data.init);
+
+                if (noProperties) {
+                    throwError(Propjet.Error.noPropertySupport);
+                }
+
+                defProperty(object, propertyName, getter, setter);
+
+                function filter(value: T): T {
+                    if (data.fltr) {
+                        return data.fltr.call(object, value, data.res);
+                    }
+                    return value;
+                }
+
+                function getter(): T {
+                    var oldLevel = data.lvl;
+                    if (oldLevel > 0) {
+                        if (oldLevel === nestingLevel) {
+                            return data.res;
+                        }
+                        throwError(Propjet.Error.circularDependency);
+                    }
+
+                    nestingLevel++;
+                    try {
+                        data.lvl = nestingLevel;
+
+                        var args: Propjet.IVersionObject[] = [];
+                        var same = getArgs(args);
+
+                        // property without getter
+                        if (!data.get) {
+                            // has initializer
+                            if (data.init) {
+                                // has requirements - reinitialize on change
+                                if (!data.src || !same) {
+                                    data.res = data.init.call(object);
+                                }
+                                if (data.src) {
+                                    saveArgs(args);
+                                }
+                                else {
+                                    // no requirement - call init once
+                                    data.init = undef;
+                                }
+                            }
+                        }
+                        else if (!same) {
+                            // call getter
+                            var newResult = data.get.apply(object, args);
+
+                            // filter new result
+                            newResult = filter(newResult);
+
+                            // store last arguments and result
+                            if (data.src) {
+                                saveArgs(args);
+                            }
+                            data.res = newResult;
+                        }
+
+                        return data.res;
+                    }
+                    finally {
+                        nestingLevel--;
+                        data.lvl = oldLevel;
                     }
                 }
-                if (forceUpdate) {
+
+                function setter(value: T) {
+                    if (data.lvl) {
+                        throwError(Propjet.Error.recursivePropertyWrite);
+                    }
+
+                    nestingLevel++;
+                    try {
+                        data.lvl = -1;
+
+                        // override property
+                        if (isUnreadyProperty(<any>value)) {
+                            data = <any>value;
+                            return;
+                        }
+
+                        // filter new value
+                        value = filter(value);
+
+                        if (data.get) {
+                            if (!data.set) {
+                                throwReadonlyError();
+                            }
+                        }
+                        else {
+                            // property without getter
+                            if (data.src) {
+                                var args: Propjet.IVersionObject[] = [];
+                                getArgs(args);
+                                saveArgs(args);
+                            }
+                            else {
+                                data.init = undef;
+                            }
+                        }
+
+                        // call setter
+                        if (data.set) {
+                            data.set.call(object, value);
+                        }
+
+                        if (!data.get) {
+                            data.res = value;
+                        }
+                    }
+                    finally {
+                        nestingLevel--;
+                        data.lvl = 0;
+                    }
+                }
+            }
+
+            function createDeferredProperty(): any {
+                var promise: Propjet.IPromise<T>;
+                var deferred = <Propjet.IDeferred<T, Propjet.IPromise<T>>>{};
+                var isInCallback: boolean;
+                var readonlyProxy: Propjet.IDeferred<T, Propjet.IPromise<T>>;
+
+                deferred.get = (forceUpdate?: boolean) => {
+                    if (forceUpdate && !deferred.pending) {
+                        checkUpdate(forceUpdate);
+                    }
+                    return promise;
+                };
+
+                function filter(value: T): T {
+                    if (data.fltr) {
+                        return wrapCall(data.fltr, [value, deferred.last]);
+                    }
+                    return value;
+                }
+
+                function defReadonlyProperty(propertyName: string) {
+                    defProperty(readonlyProxy, propertyName, () => deferred[propertyName], throwReadonlyError);
+                }
+
+                deferred.set = (newValue: T, isDeferred?: boolean) => {
+                    if (!data.set) {
+                        throwReadonlyError();
+                    }
+
+                    newValue = filter(newValue);
+
                     incrementVersion(<any>readonlyProxy || deferred);
-                    saveArgs(data, args);
-                    promise = wrapCall(object, data.get, args);
-                    setStatus(Propjet.DeferredStatus.pending);
+                    var args = [];
+                    getArgs(args, wrapCall);
+                    saveArgs(args);
+                    args.unshift(newValue);
+
+                    var promise = <Propjet.IPromise<T>>wrapCall(data.set, args);
+                    if (!isDeferred) {
+                        deferred.last = newValue;
+                    }
                     waitPromise(promise);
+                    return promise;
+                };
+
+                setValue(undef, Propjet.SetMode.reset);
+
+                if (functionMode) {
+                    var func = () => {
+                        checkUpdate();
+                        return deferred;
+                    };
+                    if (propertyName) {
+                        object[propertyName] = func;
+                    }
+                    return func;
+                }
+
+                if (noProperties) {
+                    throwError(Propjet.Error.noPropertySupport);
+                }
+
+                // create readonly property
+                readonlyProxy = <Propjet.IDeferred<T, Propjet.IPromise<T>>>{};
+                for (var prop in deferred) {
+                    defReadonlyProperty(prop);
+                }
+                defProperty(object, propertyName,
+                    () => {
+                        checkUpdate();
+                        return readonlyProxy;
+                    },
+                    (newData: Propjet.IPropData<T>) => {
+                        // override property
+                        if (isUnreadyProperty(newData)) {
+                            data = newData;
+                            setValue(undef, Propjet.SetMode.reset);
+                        }
+                        else {
+                            throwReadonlyError();
+                        }
+                    });
+
+                function wrapCall(func: (arg?: any) => any, args?: any[]): any {
+                    if (isInCallback) {
+                        throwError(Propjet.Error.circularPromises);
+                    }
+                    isInCallback = true;
+                    try {
+                        return func.apply(object, args || []);
+                    }
+                    finally {
+                        isInCallback = false;
+                    }
+                }
+
+                function setStatus(newStatus: Propjet.DeferredStatus) {
+                    deferred.pending = !newStatus;
+                    deferred.fulfilled = newStatus === Propjet.DeferredStatus.fulfilled;
+                    deferred.rejected = newStatus === Propjet.DeferredStatus.rejected;
+                    deferred.settled = !!newStatus;
+                }
+
+                function setValue(value: any, mode: Propjet.SetMode) {
+                    incrementVersion(<any>readonlyProxy || deferred);
+                    var notRejection = mode !== Propjet.SetMode.rejection;
+                    if (notRejection) {
+                        if (!mode) {
+                            value = filter(value);
+                        }
+                        deferred.last = value;
+                    }
+                    deferred.rejectReason = notRejection ? undef : value;
+                    setStatus(notRejection ? Propjet.DeferredStatus.fulfilled : Propjet.DeferredStatus.rejected);
+                }
+
+                function waitPromise(promise: Propjet.IPromise<T>) {
+                    var version = incrementVersion(<any>data);
+
+                    if (!promise) {
+                        setValue(undef, Propjet.SetMode.normal);
+                        return;
+                    }
+
+                    promise.then(
+                        value => {
+                            // ignore callbacks if newer promise is active
+                            if (getVersion(<any>data) === version) {
+                                setValue(value, Propjet.SetMode.normal);
+                            }
+                        },
+                        reason => {
+                            // ignore callbacks if newer promise is active
+                            if (getVersion(<any>data) === version) {
+                                setValue(reason, Propjet.SetMode.rejection);
+                            }
+                        });
+                }
+
+                function checkUpdate(forceUpdate?: boolean) {
+                    if (isInCallback) {
+                        return;
+                    }
+                    var args: Propjet.IVersionObject[] = [];
+                    var same = getArgs(args, wrapCall);
+                    if (!same) {
+                        forceUpdate = true;
+                        if (data.init) {
+                            deferred.last = wrapCall(data.init);
+                        }
+                    }
+                    if (forceUpdate) {
+                        incrementVersion(<any>readonlyProxy || deferred);
+                        saveArgs(args);
+                        promise = wrapCall(data.get, args);
+                        setStatus(Propjet.DeferredStatus.pending);
+                        waitPromise(promise);
+                    }
                 }
             }
         }

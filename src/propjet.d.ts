@@ -56,8 +56,8 @@ declare module Propjet {
         set(newValue: T, deferred?: boolean): TPromise;
     }
 
-    export interface IPropertyBuilder<T>
-        extends IRequire<T>, IDefault<T>, IGetOrDefault<T>, ISet<T>, IWith<T> {
+    export interface IPropertyBuilder<T> extends
+        IRequire<T>, IGetOrDefault<T>, ISet<T>, IWith<T> {
         /**
          * Marks that property returns deferred object.
          * @see IDeferred
@@ -184,13 +184,11 @@ declare module Propjet {
         withal(filter: (newValue: T, oldValue?: T) => T): IDeclareOrSet<T>;
     }
 
-    export interface IDeclareOrSet<T>
-        extends IDeclare<T>, ISet<T>
-    { }
+    export interface IDeclareOrSet<T> extends
+        IDeclare<T>, ISet<T> { }
 
-    export interface IDeclareOrSetOrWith<T>
-        extends IDeclare<T>, ISet<T>, IWith<T>
-    { }
+    export interface IDeclareOrSetOrWith<T> extends
+        IDeclare<T>, ISet<T>, IWith<T> { }
 
     export interface IDeferredRequire<T, TPromise> {
         /**
@@ -225,40 +223,40 @@ declare module Propjet {
             ...d: ((oldIn?: TIn4) => TIn4)[]): IDeferredGetOrDefault4<T, TPromise, TIn1, TIn2, TIn3, TIn4>;
     }
 
-    export interface IDeferredGetOrDefault<T, TPromise>
-        extends IDeferredGet<T, TPromise> {
+    export interface IDeferredGetOrDefault<T, TPromise> extends
+        IDeferredGet<T, TPromise> {
         /**
          * Specifies default value.
          */
         default(initialValue: () => T): IDeferredGet<T, TPromise>;
     }
 
-    export interface IDeferredGetOrDefault1<T, TPromise, TIn1>
-        extends IDeferredGet1<T, TPromise, TIn1> {
+    export interface IDeferredGetOrDefault1<T, TPromise, TIn1> extends
+        IDeferredGet1<T, TPromise, TIn1> {
         /**
          * Specifies default value.
          */
         default(initialValue: () => T): IDeferredGet1<T, TPromise, TIn1>;
     }
 
-    export interface IDeferredGetOrDefault2<T, TPromise, TIn1, TIn2>
-        extends IDeferredGet2<T, TPromise, TIn1, TIn2> {
+    export interface IDeferredGetOrDefault2<T, TPromise, TIn1, TIn2> extends
+        IDeferredGet2<T, TPromise, TIn1, TIn2> {
         /**
          * Specifies default value.
          */
         default(initialValue: () => T): IDeferredGet2<T, TPromise, TIn1, TIn2>;
     }
 
-    export interface IDeferredGetOrDefault3<T, TPromise, TIn1, TIn2, TIn3>
-        extends IDeferredGet3<T, TPromise, TIn1, TIn2, TIn3> {
+    export interface IDeferredGetOrDefault3<T, TPromise, TIn1, TIn2, TIn3> extends
+        IDeferredGet3<T, TPromise, TIn1, TIn2, TIn3> {
         /**
          * Specifies default value.
          */
         default(initialValue: () => T): IDeferredGet3<T, TPromise, TIn1, TIn2, TIn3>;
     }
 
-    export interface IDeferredGetOrDefault4<T, TPromise, TIn1, TIn2, TIn3, TIn4>
-        extends IDeferredGet4<T, TPromise, TIn1, TIn2, TIn3, TIn4> {
+    export interface IDeferredGetOrDefault4<T, TPromise, TIn1, TIn2, TIn3, TIn4> extends
+        IDeferredGet4<T, TPromise, TIn1, TIn2, TIn3, TIn4> {
         /**
          * Specifies default value.
          */
@@ -269,40 +267,44 @@ declare module Propjet {
         /**
          * Specifies function that returns getter promise.
          */
-        get(getter: () => TPromise): IDeferredSetOrDeclare<T, TPromise>;
+        get(getter: () => TPromise):
+            IDeferredWithOrSetOrDeclare<T, TPromise>;
     }
 
     export interface IDeferredGet1<T, TPromise, TIn1> {
         /**
          * Specifies function that returns getter promise.
          */
-        get(getter: (a: TIn1) => TPromise): IDeferredSetOrDeclare1<T, TPromise, TIn1>;
+        get(getter: (a: TIn1) => TPromise):
+            IDeferredWithOrSetOrDeclare1<T, TPromise, TIn1>;
     }
 
     export interface IDeferredGet2<T, TPromise, TIn1, TIn2> {
         /**
          * Specifies function that returns getter promise.
          */
-        get(getter: (a: TIn1, b: TIn2) => TPromise): IDeferredSetOrDeclare2<T, TPromise, TIn1, TIn2>;
+        get(getter: (a: TIn1, b: TIn2) => TPromise):
+            IDeferredWithOrSetOrDeclare2<T, TPromise, TIn1, TIn2>;
     }
 
     export interface IDeferredGet3<T, TPromise, TIn1, TIn2, TIn3> {
         /**
          * Specifies function that returns getter promise.
          */
-        get(getter: (a: TIn1, b: TIn2, c: TIn3) => TPromise): IDeferredSetOrDeclare3<T, TPromise, TIn1, TIn2, TIn3>;
+        get(getter: (a: TIn1, b: TIn2, c: TIn3) => TPromise):
+            IDeferredWithOrSetOrDeclare3<T, TPromise, TIn1, TIn2, TIn3>;
     }
 
     export interface IDeferredGet4<T, TPromise, TIn1, TIn2, TIn3, TIn4> {
         /**
          * Specifies function that returns getter promise.
          */
-        get(getter: (a: TIn1, b: TIn2, c: TIn3, ...d: TIn4[]) => TPromise): IDeferredSetOrDeclare4<T, TPromise, TIn1, TIn2, TIn3, TIn4>;
+        get(getter: (a: TIn1, b: TIn2, c: TIn3, ...d: TIn4[]) => TPromise):
+            IDeferredWithOrSetOrDeclare4<T, TPromise, TIn1, TIn2, TIn3, TIn4>;
     }
 
-    export interface IDeferredRequireOrGet<T, TPromise>
-        extends IDeferredRequire<T, TPromise>, IDeferredGet<T, TPromise>
-    { }
+    export interface IDeferredRequireOrGet<T, TPromise> extends
+        IDeferredRequire<T, TPromise>, IDeferredGet<T, TPromise> { }
 
     export interface IDeferredSetOrDeclare<T, TPromise> extends IDeferredDeclare<T, TPromise> {
         /**
@@ -339,6 +341,81 @@ declare module Propjet {
         set(setter: (value: T, a: TIn1, b: TIn2, c: TIn3, ...d: TIn4[]) => TPromise): IDeferredDeclare<T, TPromise>;
     }
 
+    export interface IDeferredWith<T, TPromise> {
+        /**
+         * Specifies filter that applied to both getter and setter.
+         */
+        with(filter: (newValue: T, oldValue?: T) => T): IDeferredSetOrDeclare<T, TPromise>;
+        /**
+         * Just alias for 'with'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        withal(filter: (newValue: T, oldValue?: T) => T): IDeferredSetOrDeclare<T, TPromise>;
+    }
+
+    export interface IDeferredWith1<T, TPromise, TIn1> {
+        /**
+         * Specifies filter that applied to both getter and setter.
+         */
+        with(filter: (newValue: T, oldValue?: T) => T): IDeferredSetOrDeclare1<T, TPromise, TIn1>;
+        /**
+         * Just alias for 'with'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        withal(filter: (newValue: T, oldValue?: T) => T): IDeferredSetOrDeclare1<T, TPromise, TIn1>;
+    }
+
+    export interface IDeferredWith2<T, TPromise, TIn1, TIn2> {
+        /**
+         * Specifies filter that applied to both getter and setter.
+         */
+        with(filter: (newValue: T, oldValue?: T) => T): IDeferredSetOrDeclare2<T, TPromise, TIn1, TIn2>;
+        /**
+         * Just alias for 'with'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        withal(filter: (newValue: T, oldValue?: T) => T): IDeferredSetOrDeclare2<T, TPromise, TIn1, TIn2>;
+    }
+
+    export interface IDeferredWith3<T, TPromise, TIn1, TIn2, TIn3> {
+        /**
+         * Specifies filter that applied to both getter and setter.
+         */
+        with(filter: (newValue: T, oldValue?: T) => T): IDeferredSetOrDeclare3<T, TPromise, TIn1, TIn2, TIn3>;
+        /**
+         * Just alias for 'with'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        withal(filter: (newValue: T, oldValue?: T) => T): IDeferredSetOrDeclare3<T, TPromise, TIn1, TIn2, TIn3>;
+    }
+
+    export interface IDeferredWith4<T, TPromise, TIn1, TIn2, TIn3, TIn4> {
+        /**
+         * Specifies filter that applied to both getter and setter.
+         */
+        with(filter: (newValue: T, oldValue?: T) => T): IDeferredSetOrDeclare4<T, TPromise, TIn1, TIn2, TIn3, TIn4>;
+        /**
+         * Just alias for 'with'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        withal(filter: (newValue: T, oldValue?: T) => T): IDeferredSetOrDeclare4<T, TPromise, TIn1, TIn2, TIn3, TIn4>;
+    }
+
+    export interface IDeferredWithOrSetOrDeclare<T, TPromise> extends
+        IDeferredDeclare<T, TPromise>,
+        IDeferredWith<T, TPromise> { }
+
+    export interface IDeferredWithOrSetOrDeclare1<T, TPromise, TIn1> extends
+        IDeferredWith1<T, TPromise, TIn1>,
+        IDeferredSetOrDeclare1<T, TPromise, TIn1> { }
+
+    export interface IDeferredWithOrSetOrDeclare2<T, TPromise, TIn1, TIn2> extends
+        IDeferredWith2<T, TPromise, TIn1, TIn2>,
+        IDeferredSetOrDeclare2<T, TPromise, TIn1, TIn2> { }
+
+    export interface IDeferredWithOrSetOrDeclare3<T, TPromise, TIn1, TIn2, TIn3> extends
+        IDeferredWith3<T, TPromise, TIn1, TIn2, TIn3>,
+        IDeferredSetOrDeclare3<T, TPromise, TIn1, TIn2, TIn3> { }
+
+    export interface IDeferredWithOrSetOrDeclare4<T, TPromise, TIn1, TIn2, TIn3, TIn4> extends
+        IDeferredWith4<T, TPromise, TIn1, TIn2, TIn3, TIn4>,
+        IDeferredSetOrDeclare4<T, TPromise, TIn1, TIn2, TIn3, TIn4> { }
+
     export interface IDeferredDeclare<T, TPromise> {
         /**
          * Declares the property that returns deferred object. Works only in browsers with ES5 support (IE9+).
@@ -353,7 +430,7 @@ declare module Propjet {
     }
 
     export interface IPromise<T> {
-        then(resolve: (value: T) => any, reject: (reason: any) => any): any;
+        then(resolve: (value: T) => any, reject?: (reason?: any) => any): any;
     }
 }
 
