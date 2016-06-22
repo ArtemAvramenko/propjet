@@ -397,8 +397,8 @@ declare module Propjet {
     }
 
     export interface IDeferredWithOrSetOrDeclare<T, TPromise> extends
-        IDeferredDeclare<T, TPromise>,
-        IDeferredWith<T, TPromise> { }
+        IDeferredWith<T, TPromise>,
+        IDeferredSetOrDeclare<T, TPromise>{ }
 
     export interface IDeferredWithOrSetOrDeclare1<T, TPromise, TIn1> extends
         IDeferredWith1<T, TPromise, TIn1>,
