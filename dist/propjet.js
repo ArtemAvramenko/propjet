@@ -1,21 +1,21 @@
 /*!
- propjet.js v1.3.0
+ propjet.js v1.3.1
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
 this.propjet = (function () {
-    var propVer = "__prop__ver__";
+    var propVer = '__prop__ver__';
     var defineProperty = Object.defineProperty;
     var getOwnPropertyNames = Object.getOwnPropertyNames;
     var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
     var noProperties = !(defineProperty && getOwnPropertyNames && getOwnPropertyDescriptor);
     function throwError(error) {
         throw new Error([
-            "This browser does not support property creation. Instead, use function mode.",
-            "Attempt to write readonly property",
-            "Circular dependency detected",
-            "Recursive property write",
-            "Circular promises detected"
+            'This browser does not support property creation. Instead, use function mode.',
+            'Attempt to write readonly property',
+            'Circular dependency detected',
+            'Recursive property write',
+            'Circular promises detected'
         ][error]);
     }
     function throwReadonlyError() {
@@ -51,7 +51,7 @@ this.propjet = (function () {
         // https://developer.mozilla.org/en-US/docs/ECMAScript_DontEnum_attribute#JScript_DontEnum_Bug
         // choose propertyIsEnumerable method to store hidden property,
         // but it could be any other method from Object prototype
-        var propertyIsEnumerable = "propertyIsEnumerable";
+        var propertyIsEnumerable = 'propertyIsEnumerable';
         var testIE = {};
         testIE[propertyIsEnumerable] = 0;
         for (var notIE in testIE) {
@@ -72,9 +72,9 @@ this.propjet = (function () {
     }
     else {
         setVersion = function (obj, ver) {
-            if (!ver) {
+            if (ver < 2) {
                 defineProperty(obj, propVer, {
-                    value: 0,
+                    value: ver,
                     configurable: false,
                     writable: true
                 });
@@ -101,25 +101,23 @@ this.propjet = (function () {
         });
     }
     function incrementVersion(value) {
-        if (value == null) {
-            return;
-        }
-        // value types can not be invalidated
-        var valueType = typeof value;
-        if (valueType !== "object" && valueType !== "function") {
-            return;
-        }
-        var ver = getVersion(value);
-        var newVer = 0;
-        if (ver != null) {
-            newVer = ver + 1;
-            if (newVer === ver) {
-                // reset to one when it overflows
-                newVer = 1;
+        if (value != null) {
+            // value types can not be invalidated
+            var valueType = typeof value;
+            if (valueType === 'object' || valueType === 'function') {
+                var ver = getVersion(value);
+                var newVer = 1;
+                if (ver != null) {
+                    newVer += ver;
+                    if (newVer === ver) {
+                        // reset to one when it overflows
+                        newVer = 1;
+                    }
+                }
+                setVersion(value, newVer);
+                return newVer;
             }
         }
-        setVersion(value, newVer);
-        return newVer;
     }
     ;
     var nestingLevel = 0;
@@ -146,12 +144,12 @@ this.propjet = (function () {
         // create and return property builder
         data = {};
         var builder = {
-            "from": function () {
+            'from': function () {
                 data.isDeferred = true;
                 data.src = [];
                 return builder;
             },
-            "require": function () {
+            'require': function () {
                 var args = [];
                 for (var _i = 0; _i < arguments.length; _i++) {
                     args[_i - 0] = arguments[_i];
@@ -159,15 +157,15 @@ this.propjet = (function () {
                 data.src = args;
                 return builder;
             },
-            "get": function (arg) {
+            'get': function (arg) {
                 data.get = arg;
                 return builder;
             },
-            "set": function (arg) {
+            'set': function (arg) {
                 data.set = arg;
                 return builder;
             },
-            "declare": function (functionMode) {
+            'declare': function (functionMode) {
                 if (functionMode) {
                     return createProperty(propertyName, data, true);
                 }
@@ -181,15 +179,19 @@ this.propjet = (function () {
             }
         };
         /* tslint:disable */
-        builder["with"] = builder.withal = function (arg) {
-            data.fltr = arg;
-            return builder;
-        };
+        builder['with'] =
+            /* tslint:enable */
+            builder.withal = function (arg) {
+                data.fltr = arg;
+                return builder;
+            };
         /* tslint:disable */
-        builder["default"] = builder.defaults = function (arg) {
-            data.init = arg;
-            return builder;
-        };
+        builder['default'] =
+            /* tslint:enable */
+            builder.defaults = function (arg) {
+                data.init = arg;
+                return builder;
+            };
         return builder;
         function isUnreadyProperty(data) {
             var result = data != null && data.__prop__unready__;
@@ -200,20 +202,22 @@ this.propjet = (function () {
         }
         function createProperty(propertyName, data, functionMode) {
             return data.isDeferred ? createDeferredProperty() : createRegularProperty();
-            function emptyValue(value) {
+            function emptyValue(value, len, ver) {
                 if (value === undef) {
                     return 1;
                 }
                 if (value == null) {
                     return 2;
                 }
-                if (value.length === 0 && getVersion(value) == null) {
-                    for (var i in value) {
+                if (len === 0 && ver == null) {
+                    /* tslint:disable */
+                    for (var i in value) 
+                    /* tslint:enable */ {
                         return 0;
                     }
                     return 3;
                 }
-                if (typeof value === "number" && isNaN(value)) {
+                if (typeof value === 'number' && isNaN(value)) {
                     return 4;
                 }
                 return 0;
@@ -236,10 +240,10 @@ this.propjet = (function () {
                     }
                     args[i] = arg;
                     if (same) {
-                        var oldEmpty = emptyValue(old.val);
-                        var newEmpty = emptyValue(arg);
+                        var oldEmpty = emptyValue(old.val, old.len, old.ver);
+                        var newEmpty = emptyValue(arg, arg && arg.length, arg && getVersion(arg));
                         if (oldEmpty) {
-                            same = oldEmpty === newEmpty;
+                            same = oldEmpty === newEmpty && !old.len;
                         }
                         else {
                             same = !newEmpty && old.val === arg && old.ver === getVersion(arg) && old.len === arg.length;
@@ -492,23 +496,22 @@ this.propjet = (function () {
                     });
                 }
                 function checkUpdate(forceUpdate) {
-                    if (isInCallback) {
-                        return;
-                    }
-                    var args = [];
-                    var same = getArgs(args, wrapCall);
-                    if (!same) {
-                        forceUpdate = true;
-                        if (data.init) {
-                            deferred.last = wrapCall(data.init);
+                    if (!isInCallback) {
+                        var args = [];
+                        var same = getArgs(args, wrapCall);
+                        if (!same) {
+                            forceUpdate = true;
+                            if (data.init) {
+                                deferred.last = wrapCall(data.init);
+                            }
                         }
-                    }
-                    if (forceUpdate) {
-                        incrementVersion(readonlyProxy || deferred);
-                        saveArgs(args);
-                        promise = wrapCall(data.get, args);
-                        setStatus(0 /* pending */);
-                        waitPromise(promise);
+                        if (forceUpdate) {
+                            incrementVersion(readonlyProxy || deferred);
+                            saveArgs(args);
+                            promise = wrapCall(data.get, args);
+                            setStatus(0 /* pending */);
+                            waitPromise(promise);
+                        }
                     }
                 }
             }

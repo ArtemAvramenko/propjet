@@ -13,7 +13,7 @@ Via [Bower](http://bower.io/): `$ bower install propjet.js`
 Manually: extract files from [PropjetJS.zip](PropjetJS.zip?raw=true)
 
 #Example
-```C++
+```TypeScript
 class Person
 {
     constructor()
@@ -21,20 +21,20 @@ class Person
         propjet(this);
     }
 
-    firstName = propjet<string>().
-        default(() => "Unknown").
-        declare();
+    firstName = propjet<string>()
+        .default(() => "Unknown")
+        .declare();
 
     lastName = "";
 
-    fullName = propjet<string>().
-        require(() => this.firstName, () => this.lastName).
-        get((firstName, lastName) => (firstName + " " + lastName).trim()).
-        declare();
+    fullName = propjet<string>()
+        .require(() => this.firstName, () => this.lastName)
+        .get((firstName, lastName) => (firstName + " " + lastName).trim())
+        .declare();
 
-    propIE8 = propjet<string>().
-        default(() => "Hello, IE!").
-        declare(true); // function mode: get - propIE8(), set - propIE8(newValue)
+    propIE8 = propjet<string>()
+        .default(() => "Hello, IE!")
+        .declare(true); // function mode: get - propIE8(), set - propIE8(newValue)
 }
 ```
 more - [documentation](../../wiki/Documentation), [AngularJS demo](demo.ts), [Jasmine specs](src/propjet.spec.ts)

@@ -9,3 +9,4 @@ src/*.js.map
 *.csproj.user
 node_modules
 .tscache
+.vs/config/applicationhost.config

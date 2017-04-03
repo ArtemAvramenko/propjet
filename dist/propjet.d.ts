@@ -1,9 +1,10 @@
 /*!
- propjet.js v1.3.0
+ propjet.js v1.3.1
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
 declare module Propjet {
+
     export interface IPropjet {
         /**
          * Declares uninitialized property.
@@ -402,8 +403,8 @@ declare module Propjet {
     }
 
     export interface IDeferredWithOrSetOrDeclare<T, TPromise> extends
-        IDeferredDeclare<T, TPromise>,
-        IDeferredWith<T, TPromise> { }
+        IDeferredWith<T, TPromise>,
+        IDeferredSetOrDeclare<T, TPromise> { }
 
     export interface IDeferredWithOrSetOrDeclare1<T, TPromise, TIn1> extends
         IDeferredWith1<T, TPromise, TIn1>,

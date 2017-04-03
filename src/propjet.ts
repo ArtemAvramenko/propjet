@@ -1,4 +1,5 @@
 declare module Propjet {
+
     export interface IBuilder<T> extends IPropertyBuilder<T>, IDeclare<T>
     { }
 
@@ -46,7 +47,8 @@ declare module Propjet {
 }
 
 (<any>this).propjet = (() => {
-    var propVer = "__prop__ver__";
+
+    var propVer = '__prop__ver__';
     var defineProperty = Object.defineProperty;
     var getOwnPropertyNames = Object.getOwnPropertyNames;
     var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
@@ -54,11 +56,11 @@ declare module Propjet {
 
     function throwError(error: Propjet.Error) {
         throw new Error([
-            "This browser does not support property creation. Instead, use function mode.",
-            "Attempt to write readonly property",
-            "Circular dependency detected",
-            "Recursive property write",
-            "Circular promises detected"
+            'This browser does not support property creation. Instead, use function mode.',
+            'Attempt to write readonly property',
+            'Circular dependency detected',
+            'Recursive property write',
+            'Circular promises detected'
         ][error]);
     }
 
@@ -98,7 +100,7 @@ declare module Propjet {
         // https://developer.mozilla.org/en-US/docs/ECMAScript_DontEnum_attribute#JScript_DontEnum_Bug
         // choose propertyIsEnumerable method to store hidden property,
         // but it could be any other method from Object prototype
-        var propertyIsEnumerable = "propertyIsEnumerable";
+        var propertyIsEnumerable = 'propertyIsEnumerable';
         var testIE = {};
         testIE[propertyIsEnumerable] = 0;
         for (var notIE in testIE) {
@@ -121,9 +123,9 @@ declare module Propjet {
     }
     else {
         setVersion = (obj, ver) => {
-            if (!ver) {
+            if (ver < 2) {
                 defineProperty(obj, propVer, {
-                    value: 0,
+                    value: ver,
                     configurable: false,
                     writable: true
                 });
@@ -153,27 +155,26 @@ declare module Propjet {
     }
 
     function incrementVersion(value: Propjet.IVersionObject): number {
-        if (value == null) {
-            return;
-        }
 
-        // value types can not be invalidated
-        var valueType = typeof value;
-        if (valueType !== "object" && valueType !== "function") {
-            return;
-        }
+        if (value != null) {
 
-        var ver = getVersion(value);
-        var newVer = 0;
-        if (ver != null) {
-            newVer = ver + 1;
-            if (newVer === ver) {
-                // reset to one when it overflows
-                newVer = 1;
+            // value types can not be invalidated
+            var valueType = typeof value;
+            if (valueType === 'object' || valueType === 'function') {
+
+                var ver = getVersion(value);
+                var newVer = 1;
+                if (ver != null) {
+                    newVer += ver;
+                    if (newVer === ver) {
+                        // reset to one when it overflows
+                        newVer = 1;
+                    }
+                }
+                setVersion(value, newVer);
+                return newVer;
             }
         }
-        setVersion(value, newVer);
-        return newVer;
     };
 
     var nestingLevel = 0;
@@ -205,24 +206,24 @@ declare module Propjet {
         data = <Propjet.IPropData<T>>{};
 
         var builder = <Propjet.IBuilder<T>>{
-            "from": () => {
+            'from': () => {
                 data.isDeferred = true;
                 data.src = [];
                 return builder;
             },
-            "require": (...args: any[]) => {
+            'require': (...args: any[]) => {
                 data.src = args;
                 return builder;
             },
-            "get": arg => {
+            'get': arg => {
                 data.get = arg;
                 return builder;
             },
-            "set": arg => {
+            'set': arg => {
                 data.set = arg;
                 return builder;
             },
-            "declare": (functionMode?: boolean) => {
+            'declare': (functionMode?: boolean) => {
                 if (functionMode) {
                     return <any>createProperty(propertyName, data, true);
                 }
@@ -237,20 +238,20 @@ declare module Propjet {
         };
 
         /* tslint:disable */
-        builder["with"] =
-        /* tslint:enable */
-        (<Propjet.IBuilder<T>>builder).withal = arg => {
-            data.fltr = arg;
-            return builder;
-        };
+        builder['with'] =
+            /* tslint:enable */
+            (<Propjet.IBuilder<T>>builder).withal = arg => {
+                data.fltr = arg;
+                return builder;
+            };
 
         /* tslint:disable */
-        builder["default"] =
-        /* tslint:enable */
-        (<Propjet.IBuilder<T>>builder).defaults = arg => {
-            data.init = arg;
-            return builder;
-        };
+        builder['default'] =
+            /* tslint:enable */
+            (<Propjet.IBuilder<T>>builder).defaults = arg => {
+                data.init = arg;
+                return builder;
+            };
 
         return builder;
 
@@ -265,14 +266,14 @@ declare module Propjet {
         function createProperty(propertyName: string, data: Propjet.IPropData<T>, functionMode?: boolean): any {
             return data.isDeferred ? createDeferredProperty() : createRegularProperty();
 
-            function emptyValue(value: any): number {
+            function emptyValue(value: any, len: number, ver: number): number {
                 if (value === undef) {
                     return 1;
                 }
                 if (value == null) {
                     return 2;
                 }
-                if (value.length === 0 && getVersion(value) == null) {
+                if (len === 0 && ver == null) {
                     /* tslint:disable */
                     for (var i in value)
                     /* tslint:enable */ {
@@ -280,7 +281,7 @@ declare module Propjet {
                     }
                     return 3;
                 }
-                if (typeof value === "number" && isNaN(value)) {
+                if (typeof value === 'number' && isNaN(value)) {
                     return 4;
                 }
                 return 0;
@@ -296,7 +297,7 @@ declare module Propjet {
                 var ignoreOldValues = !same;
 
                 forEach(data.src, (source, i) => {
-                    var old = ignoreOldValues ? undef : data.vals[i];
+                    var old = ignoreOldValues ? <Propjet.ISourceValue>undef : data.vals[i];
                     var arg: Propjet.IVersionObject;
                     if (caller) {
                         arg = caller(source, [old != null ? old.val : undef]);
@@ -306,10 +307,10 @@ declare module Propjet {
                     }
                     args[i] = arg;
                     if (same) {
-                        var oldEmpty = emptyValue(old.val);
-                        var newEmpty = emptyValue(arg);
+                        var oldEmpty = emptyValue(old.val, old.len, old.ver);
+                        var newEmpty = emptyValue(arg, arg && arg.length, arg && getVersion(arg));
                         if (oldEmpty) {
-                            same = oldEmpty === newEmpty;
+                            same = oldEmpty === newEmpty && !old.len;
                         }
                         else {
                             same = !newEmpty && old.val === arg && old.ver === getVersion(arg) && old.len === arg.length;
@@ -606,23 +607,26 @@ declare module Propjet {
                 }
 
                 function checkUpdate(forceUpdate?: boolean) {
-                    if (isInCallback) {
-                        return;
-                    }
-                    var args: Propjet.IVersionObject[] = [];
-                    var same = getArgs(args, wrapCall);
-                    if (!same) {
-                        forceUpdate = true;
-                        if (data.init) {
-                            deferred.last = wrapCall(data.init);
+
+                    if (!isInCallback) {
+
+                        var args: Propjet.IVersionObject[] = [];
+                        var same = getArgs(args, wrapCall);
+
+                        if (!same) {
+                            forceUpdate = true;
+                            if (data.init) {
+                                deferred.last = wrapCall(data.init);
+                            }
                         }
-                    }
-                    if (forceUpdate) {
-                        incrementVersion(<any>readonlyProxy || deferred);
-                        saveArgs(args);
-                        promise = wrapCall(data.get, args);
-                        setStatus(Propjet.DeferredStatus.pending);
-                        waitPromise(promise);
+
+                        if (forceUpdate) {
+                            incrementVersion(<any>readonlyProxy || deferred);
+                            saveArgs(args);
+                            promise = wrapCall(data.get, args);
+                            setStatus(Propjet.DeferredStatus.pending);
+                            waitPromise(promise);
+                        }
                     }
                 }
             }
