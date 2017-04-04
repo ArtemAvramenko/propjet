@@ -365,6 +365,46 @@ describe('Regular propjet property', () => {
         array.push(1);
         expect(obj.arrayLength).toBe(1);
     });
+
+    it('does not recall getter on empty string', () => {
+        var callCount = 0;
+        var x = "";
+        var obj = {
+            y: propjet<string>()
+                .require(() => x)
+                .get(x => {
+                    callCount++;
+                    return x;
+                }
+                )
+                .declare()
+        };
+        propjet(obj);
+        expect(obj.y).toBe("");
+        expect(callCount).toBe(1);
+        expect(obj.y).toBe("");
+        expect(callCount).toBe(1);
+    });
+
+    it('does not recall getter on empty array', () => {
+        var callCount = 0;
+        var x: number[] = [];
+        var obj = {
+            y: propjet<number[]>()
+                .require(() => x)
+                .get(x => {
+                    callCount++;
+                    return x;
+                }
+                )
+                .declare()
+        };
+        propjet(obj);
+        expect(obj.y).toEqual([]);
+        expect(callCount).toBe(1);
+        expect(obj.y).toEqual([]);
+        expect(callCount).toBe(1);
+    });
 });
 
 describe('Deferred propjet property', () => {

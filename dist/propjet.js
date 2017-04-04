@@ -1,5 +1,5 @@
 /*!
- propjet.js v1.3.2
+ propjet.js v1.3.3
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
@@ -105,14 +105,11 @@ this.propjet = (function () {
             // value types can not be invalidated
             var valueType = typeof value;
             if (valueType === 'object' || valueType === 'function') {
-                var ver = getVersion(value);
+                // reset version to one when it is not specified or it is overflowed
                 var newVer = 1;
-                if (ver != null) {
+                var ver = getVersion(value);
+                if (ver != null && ver < 0x7FFFFFFF) {
                     newVer += ver;
-                    if (newVer === ver) {
-                        // reset to one when it overflows
-                        newVer = 1;
-                    }
                 }
                 setVersion(value, newVer);
                 return newVer;
@@ -241,7 +238,7 @@ this.propjet = (function () {
                     args[i] = arg;
                     if (same) {
                         var oldEmpty = emptyValue(old.val, old.len, old.ver);
-                        var newEmpty = emptyValue(arg, arg && arg.length, arg && getVersion(arg));
+                        var newEmpty = emptyValue(arg, arg != null ? arg.length : undef, arg ? getVersion(arg) : undef);
                         if (oldEmpty) {
                             same = oldEmpty === newEmpty && !old.len;
                         }

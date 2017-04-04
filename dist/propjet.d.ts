@@ -1,5 +1,5 @@
 /*!
- propjet.js v1.3.2
+ propjet.js v1.3.3
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
