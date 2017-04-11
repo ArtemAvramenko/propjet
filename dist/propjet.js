@@ -1,5 +1,5 @@
 /*!
- propjet.js v1.3.3
+ propjet.js v1.3.4
  (c) 2015 Artem Avramenko. https://github.com/ArtemAvramenko/propjet.js
  License: MIT
 */
@@ -302,7 +302,7 @@ this.propjet = (function () {
                             if (data.init) {
                                 // has requirements - reinitialize on change
                                 if (!data.src || !same) {
-                                    data.res = data.init.call(object);
+                                    data.res = data.init.apply(object, args);
                                 }
                                 if (data.src) {
                                     saveArgs(args);
@@ -499,7 +499,7 @@ this.propjet = (function () {
                         if (!same) {
                             forceUpdate = true;
                             if (data.init) {
-                                deferred.last = wrapCall(data.init);
+                                deferred.last = wrapCall(data.init, args);
                             }
                         }
                         if (forceUpdate) {

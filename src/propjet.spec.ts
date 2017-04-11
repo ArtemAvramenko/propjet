@@ -405,6 +405,36 @@ describe('Regular propjet property', () => {
         expect(obj.y).toEqual([]);
         expect(callCount).toBe(1);
     });
+
+    it('can read last value in default callback', () => {
+        var x: number;
+        var obj = {
+            y: propjet<number>()
+                .require(() => x)
+                .default(() => {
+                    var previousValue: number = obj.y || 0;
+                    return previousValue + x * 100;
+                })
+                .declare()
+        };
+        x = 1;
+        propjet(obj);
+        expect(obj.y).toEqual(100);
+        x = 2;
+        expect(obj.y).toEqual(300);
+    });
+
+    it('pass source values to default callback', () => {
+        var x = 1;
+        var obj = {
+            y: propjet<number>()
+                .require(() => x)
+                .default(x => x * 100)
+                .declare()
+        };
+        propjet(obj);
+        expect(obj.y).toEqual(100);
+    });
 });
 
 describe('Deferred propjet property', () => {
@@ -522,5 +552,39 @@ describe('Deferred propjet property', () => {
         expect(obj.deferred.last).toBe(1);
         obj.deferred.get().resolve(2);
         expect(obj.deferred.last).toBe(2);
+    });
+
+    it('can read last value in default callback', () => {
+        var x: number;
+        var obj = {
+            y: propjet<number>()
+                .from<TestPromise<number>>()
+                .require(() => x)
+                .default(() => {
+                    var previousValue: number = obj.y.last || 0;
+                    return previousValue + x * 100;
+                })
+                .get(() => new TestPromise<number>())
+                .declare()
+        };
+        x = 1;
+        propjet(obj);
+        expect(obj.y.last).toEqual(100);
+        x = 2;
+        expect(obj.y.last).toEqual(300);
+    });
+
+    it('pass source values to default callback', () => {
+        var x = 1;
+        var obj = {
+            y: propjet<number>()
+                .from<TestPromise<number>>()
+                .require(() => x)
+                .default(x => x * 100)
+                .get(() => new TestPromise<number>())
+                .declare()
+        };
+        propjet(obj);
+        expect(obj.y.last).toEqual(100);
     });
 });

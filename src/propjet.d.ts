@@ -75,20 +75,20 @@ declare module Propjet {
          * Specifies one data source.
          */
         require<TIn1>(
-            a: (oldIn?: TIn1) => TIn1): IGet1OrDefault<T, TIn1>;
+            a: (oldIn?: TIn1) => TIn1): IGetOrDefault1<T, TIn1>;
         /**
          * Specifies two data sources.
          */
         require<TIn1, TIn2>(
             a: (oldIn?: TIn1) => TIn1,
-            b: (oldIn?: TIn2) => TIn2): IGet2OrDefault<T, TIn1, TIn2>;
+            b: (oldIn?: TIn2) => TIn2): IGetOrDefault2<T, TIn1, TIn2>;
         /**
          * Specifies three data sources.
          */
         require<TIn1, TIn2, TIn3>(
             a: (oldIn?: TIn1) => TIn1,
             b: (oldIn?: TIn2) => TIn2,
-            c: (oldIn?: TIn3) => TIn3): IGet3OrDefault<T, TIn1, TIn2, TIn3>;
+            c: (oldIn?: TIn3) => TIn3): IGetOrDefault3<T, TIn1, TIn2, TIn3>;
         /**
          * Specifies four or more data sources.
          */
@@ -96,45 +96,14 @@ declare module Propjet {
             a: (oldIn?: TIn1) => TIn1,
             b: (oldIn?: TIn2) => TIn2,
             c: (oldIn?: TIn3) => TIn3,
-            ...d: ((oldIn?: TIn4) => TIn4)[]): IGet4OrDefault<T, TIn1, TIn2, TIn3, TIn4>;
+            ...d: ((oldIn?: TIn4) => TIn4)[]): IGetOrDefault4<T, TIn1, TIn2, TIn3, TIn4>;
     }
 
-    export interface IGetOrDefault<T> extends IDefault<T> {
+    export interface IGetOrDefault<T> {
         /**
          * Specifies property getter.
          */
         get(getter: () => T): IDeclareOrSetOrWith<T>;
-    }
-
-    export interface IGet1OrDefault<T, TIn1> extends IDefault<T> {
-        /**
-         * Specifies property getter.
-         */
-        get(getter: (a: TIn1) => T): IDeclareOrSetOrWith<T>;
-    }
-
-    export interface IGet2OrDefault<T, TIn1, TIn2> extends IDefault<T> {
-        /**
-         * Specifies property getter.
-         */
-        get(getter: (a: TIn1, b: TIn2) => T): IDeclareOrSetOrWith<T>;
-    }
-
-    export interface IGet3OrDefault<T, TIn1, TIn2, TIn3> extends IDefault<T> {
-        /**
-         * Specifies property getter.
-         */
-        get(getter: (a: TIn1, b: TIn2, c: TIn3) => T): IDeclareOrSetOrWith<T>;
-    }
-
-    export interface IGet4OrDefault<T, TIn1, TIn2, TIn3, TIn4> extends IDefault<T> {
-        /**
-         * Specifies property getter.
-         */
-        get(getter: (a: TIn1, b: TIn2, c: TIn3, ...d: TIn4[]) => T): IDeclareOrSetOrWith<T>;
-    }
-
-    export interface IDefault<T> {
         /**
          * Specifies default value.
          */
@@ -143,6 +112,66 @@ declare module Propjet {
          * Just alias for 'default'. Works in outdated browsers without ES5 support (IE8 and below).
          */
         defaults(initialValue: () => T): IDeclareOrSetOrWith<T>;
+    }
+
+    export interface IGetOrDefault1<T, TIn1> {
+        /**
+         * Specifies property getter.
+         */
+        get(getter: (a: TIn1) => T): IDeclareOrSetOrWith<T>;
+        /**
+         * Specifies default value.
+         */
+        default(initialValue: (a: TIn1) => T): IDeclareOrSetOrWith<T>;
+        /**
+         * Just alias for 'default'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        defaults(initialValue: (a: TIn1) => T): IDeclareOrSetOrWith<T>;
+    }
+
+    export interface IGetOrDefault2<T, TIn1, TIn2> {
+        /**
+         * Specifies property getter.
+         */
+        get(getter: (a: TIn1, b: TIn2) => T): IDeclareOrSetOrWith<T>;
+        /**
+         * Specifies default value.
+         */
+        default(initialValue: (a: TIn1, b: TIn2) => T): IDeclareOrSetOrWith<T>;
+        /**
+         * Just alias for 'default'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        defaults(initialValue: (a: TIn1, b: TIn2) => T): IDeclareOrSetOrWith<T>;
+    }
+
+    export interface IGetOrDefault3<T, TIn1, TIn2, TIn3> {
+        /**
+         * Specifies property getter.
+         */
+        get(getter: (a: TIn1, b: TIn2, c: TIn3) => T): IDeclareOrSetOrWith<T>;
+        /**
+         * Specifies default value.
+         */
+        default(initialValue: (a: TIn1, b: TIn2, c: TIn3) => T): IDeclareOrSetOrWith<T>;
+        /**
+         * Just alias for 'default'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        defaults(initialValue: (a: TIn1, b: TIn2, c: TIn3) => T): IDeclareOrSetOrWith<T>;
+    }
+
+    export interface IGetOrDefault4<T, TIn1, TIn2, TIn3, TIn4> {
+        /**
+         * Specifies property getter.
+         */
+        get(getter: (a: TIn1, b: TIn2, c: TIn3, ...d: TIn4[]) => T): IDeclareOrSetOrWith<T>;
+        /**
+         * Specifies default value.
+         */
+        default(initialValue: (a: TIn1, b: TIn2, c: TIn3, ...d: TIn4[]) => T): IDeclareOrSetOrWith<T>;
+        /**
+         * Just alias for 'default'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        defaults(initialValue: (a: TIn1, b: TIn2, c: TIn3, ...d: TIn4[]) => T): IDeclareOrSetOrWith<T>;
     }
 
     export interface IDeclare<T> {
@@ -230,6 +259,10 @@ declare module Propjet {
          * Specifies default value.
          */
         default(initialValue: () => T): IDeferredGet<T, TPromise>;
+        /**
+         * Just alias for 'default'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        defaults(initialValue: () => T): IDeferredGet<T, TPromise>;
     }
 
     export interface IDeferredGetOrDefault1<T, TPromise, TIn1> extends
@@ -237,7 +270,11 @@ declare module Propjet {
         /**
          * Specifies default value.
          */
-        default(initialValue: () => T): IDeferredGet1<T, TPromise, TIn1>;
+        default(initialValue: (a: TIn1) => T): IDeferredGet1<T, TPromise, TIn1>;
+        /**
+         * Just alias for 'default'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        defaults(initialValue: (a: TIn1) => T): IDeferredGet1<T, TPromise, TIn1>;
     }
 
     export interface IDeferredGetOrDefault2<T, TPromise, TIn1, TIn2> extends
@@ -245,7 +282,11 @@ declare module Propjet {
         /**
          * Specifies default value.
          */
-        default(initialValue: () => T): IDeferredGet2<T, TPromise, TIn1, TIn2>;
+        default(initialValue: (a: TIn1, b: TIn2) => T): IDeferredGet2<T, TPromise, TIn1, TIn2>;
+        /**
+         * Just alias for 'default'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        defaults(initialValue: (a: TIn1, b: TIn2) => T): IDeferredGet2<T, TPromise, TIn1, TIn2>;
     }
 
     export interface IDeferredGetOrDefault3<T, TPromise, TIn1, TIn2, TIn3> extends
@@ -253,7 +294,11 @@ declare module Propjet {
         /**
          * Specifies default value.
          */
-        default(initialValue: () => T): IDeferredGet3<T, TPromise, TIn1, TIn2, TIn3>;
+        default(initialValue: (a: TIn1, b: TIn2, c: TIn3) => T): IDeferredGet3<T, TPromise, TIn1, TIn2, TIn3>;
+        /**
+         * Just alias for 'default'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        defaults(initialValue: (a: TIn1, b: TIn2, c: TIn3) => T): IDeferredGet3<T, TPromise, TIn1, TIn2, TIn3>;
     }
 
     export interface IDeferredGetOrDefault4<T, TPromise, TIn1, TIn2, TIn3, TIn4> extends
@@ -261,7 +306,11 @@ declare module Propjet {
         /**
          * Specifies default value.
          */
-        default(initialValue: () => T): IDeferredGet4<T, TPromise, TIn1, TIn2, TIn3, TIn4>;
+        default(initialValue: (a: TIn1, b: TIn2, c: TIn3, ...d: TIn4[]) => T): IDeferredGet4<T, TPromise, TIn1, TIn2, TIn3, TIn4>;
+        /**
+         * Just alias for 'default'. Works in outdated browsers without ES5 support (IE8 and below).
+         */
+        defaults(initialValue: (a: TIn1, b: TIn2, c: TIn3, ...d: TIn4[]) => T): IDeferredGet4<T, TPromise, TIn1, TIn2, TIn3, TIn4>;
     }
 
     export interface IDeferredGet<T, TPromise> {

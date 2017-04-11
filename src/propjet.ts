@@ -381,7 +381,7 @@ declare module Propjet {
                             if (data.init) {
                                 // has requirements - reinitialize on change
                                 if (!data.src || !same) {
-                                    data.res = data.init.call(object);
+                                    data.res = data.init.apply(object, args);
                                 }
                                 if (data.src) {
                                     saveArgs(args);
@@ -614,7 +614,7 @@ declare module Propjet {
                         if (!same) {
                             forceUpdate = true;
                             if (data.init) {
-                                deferred.last = wrapCall(data.init);
+                                deferred.last = wrapCall(data.init, args);
                             }
                         }
 
