@@ -1,18 +1,16 @@
-#propjet.js
+# propjet.js
 JavaScript/TypeScript library for declaring reactive properties.
 
 Supports function mode for outdated browsers (IE8 and below).
 
 Code licensed under [MIT License](LICENSE).
 
-#Installing
-Via [NuGet](https://www.nuget.org/packages/propjet.js/): `$ Install-Package propjet.js`
+# Installing
+* Via [NuGet](https://www.nuget.org/packages/propjet.js/): `$ Install-Package propjet.js`
+* Via [Bower](http://bower.io/): `$ bower install propjet.js`
+* Manually: extract files from [PropjetJS.zip](PropjetJS.zip?raw=true)
 
-Via [Bower](http://bower.io/): `$ bower install propjet.js`
-
-Manually: extract files from [PropjetJS.zip](PropjetJS.zip?raw=true)
-
-#Example
+# Example
 ```TypeScript
 class Person
 {
