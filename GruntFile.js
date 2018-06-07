@@ -29,7 +29,7 @@
                 options: {
                     banner: '/*!\r\n' +
                         ' <%= pkg.name %>.js v<%= pkg.version %>\r\n' +
-                        ' (c) 2015 <%= pkg.author %>. <%= pkg.homepage %>\r\n' +
+                        ' (c) 2018 <%= pkg.author %>. <%= pkg.homepage %>\r\n' +
                         ' License: <%= pkg.license %>\r\n' +
                         '*/\r\n'
                 },
